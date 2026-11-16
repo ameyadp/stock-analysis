@@ -1,14 +1,16 @@
 {
   "name": "stock-analysis",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "How a stock behaves across Fed rate cycles and the macro economy",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "vitest run",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply stock-analysis-telemetry --remote",
+    "stats": "node scripts/stats.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

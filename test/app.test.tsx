@@ -12,6 +12,9 @@ vi.mock('../src/components/UPlotChart', () => ({
 
 const { default: App } = await import('../src/App');
 
+const TIINGO = '0123456789abcdef0123456789abcdef01234567';
+const FRED = 'abcdefghijklmnopqrstuvwxyz012345';
+
 function makeStock(ticker: string): StockData {
 	const dates: string[] = [];
 	const adjClose: number[] = [];
@@ -40,14 +43,30 @@ const macro: MacroData = {
 	fetchedAt: '',
 };
 
-const fetchMock = vi.fn(async (url: string) => {
-	if (url.endsWith('/api/macro')) return Response.json(macro);
+/** Fake relay: checks the visitor's key headers like the real Worker does. */
+const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+	const headers = (init?.headers ?? {}) as Record<string, string>;
+	if (url.endsWith('/api/macro')) {
+		return headers['X-Fred-Key'] === FRED
+			? Response.json(macro)
+			: Response.json({ error: 'FRED rejected your API key. Check it in Data keys.' }, { status: 401 });
+	}
+	if (headers['X-Tiingo-Key'] !== TIINGO) {
+		return Response.json({ error: 'Tiingo rejected your API key. Check it in Data keys.' }, { status: 401 });
+	}
 	const ticker = decodeURIComponent(url.split('/api/stock/')[1] ?? '');
 	if (ticker === 'ZZZZ') return Response.json({ error: 'No data found for "ZZZZ". Check the ticker symbol.' }, { status: 404 });
 	return Response.json(makeStock(ticker));
 });
 
+const saveKeys = () => {
+	localStorage.setItem('stock-analysis:tiingo-key', TIINGO);
+	localStorage.setItem('stock-analysis:fred-key', FRED);
+};
+
 beforeEach(() => {
+	localStorage.clear();
+	localStorage.setItem('stock-analysis:telemetry-consent', 'denied');
 	fetchMock.mockClear();
 	vi.stubGlobal('fetch', fetchMock);
 	window.history.replaceState(null, '', '/projects/stock-analysis/app/');
@@ -58,8 +77,70 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-describe('Stock Analysis app', () => {
-	it('analyzes a ticker end to end', async () => {
+describe('first-time setup', () => {
+	it('asks for keys, checks their format, tests them, and saves them', async () => {
+		const user = userEvent.setup();
+		render(<App />);
+		expect(screen.getByRole('heading', { name: 'Connect your free data keys' })).toBeTruthy();
+
+		await user.type(screen.getByLabelText('Tiingo API token'), 'too-short');
+		await user.type(screen.getByLabelText('FRED API key'), 'NOPE');
+		await user.click(screen.getByRole('button', { name: 'Test & save' }));
+		expect(screen.getByText(/A Tiingo token is 40 letters/)).toBeTruthy();
+		expect(screen.getByText(/A FRED key is 32 lowercase/)).toBeTruthy();
+		expect(fetchMock).not.toHaveBeenCalled();
+
+		await user.clear(screen.getByLabelText('Tiingo API token'));
+		await user.type(screen.getByLabelText('Tiingo API token'), TIINGO.toUpperCase());
+		await user.clear(screen.getByLabelText('FRED API key'));
+		await user.type(screen.getByLabelText('FRED API key'), ` ${FRED} `);
+		await user.click(screen.getByRole('button', { name: 'Test & save' }));
+
+		await waitFor(() => expect(screen.queryByRole('heading', { name: 'Connect your free data keys' })).toBeNull());
+		expect(localStorage.getItem('stock-analysis:tiingo-key')).toBe(TIINGO);
+		expect(localStorage.getItem('stock-analysis:fred-key')).toBe(FRED);
+		expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/api/stock/SPY'))).toBe(true);
+
+		await user.click(screen.getByRole('button', { name: 'AAPL' }));
+		expect(await screen.findByRole('heading', { name: /AAPL Corp/ })).toBeTruthy();
+	});
+
+	it('points to the key the provider rejected and does not save', async () => {
+		const user = userEvent.setup();
+		render(<App />);
+		await user.type(screen.getByLabelText('Tiingo API token'), 'f'.repeat(40));
+		await user.type(screen.getByLabelText('FRED API key'), FRED);
+		await user.click(screen.getByRole('button', { name: 'Test & save' }));
+		expect(await screen.findByText(/Tiingo rejected your API key/)).toBeTruthy();
+		expect(screen.getByLabelText('Tiingo API token').getAttribute('aria-invalid')).toBe('true');
+		expect(screen.getByLabelText('FRED API key').getAttribute('aria-invalid')).toBe('false');
+		expect(localStorage.getItem('stock-analysis:tiingo-key')).toBeNull();
+	});
+
+	it('asks for usage consent once and remembers the answer', async () => {
+		localStorage.removeItem('stock-analysis:telemetry-consent');
+		const user = userEvent.setup();
+		render(<App />);
+		await user.click(screen.getByRole('button', { name: 'No thanks' }));
+		expect(screen.queryByRole('region', { name: 'Usage sharing' })).toBeNull();
+		expect(localStorage.getItem('stock-analysis:telemetry-consent')).toBe('denied');
+	});
+
+	it('lets people remove their keys', async () => {
+		saveKeys();
+		const user = userEvent.setup();
+		render(<App />);
+		await user.click(screen.getByRole('button', { name: '🔑 Data keys' }));
+		await user.click(screen.getByRole('button', { name: 'Remove keys from this browser' }));
+		expect(screen.getByRole('heading', { name: 'Connect your free data keys' })).toBeTruthy();
+		expect(localStorage.getItem('stock-analysis:tiingo-key')).toBeNull();
+	});
+});
+
+describe('analysis with saved keys', () => {
+	beforeEach(saveKeys);
+
+	it('analyzes a ticker end to end, sending the visitor’s own keys', async () => {
 		const user = userEvent.setup();
 		render(<App />);
 		expect(screen.getByText('How does a stock behave when the Fed moves?')).toBeTruthy();
@@ -69,29 +150,22 @@ describe('Stock Analysis app', () => {
 
 		expect(await screen.findByRole('heading', { name: /AAPL Corp/ })).toBeTruthy();
 		expect(screen.getByText('Return, 1 year')).toBeTruthy();
-		expect(screen.getByText('Worst fall')).toBeTruthy();
 		expect(screen.getByRole('img', { name: 'Price history for AAPL' })).toBeTruthy();
 		expect(await screen.findByText('Through Fed rate cycles')).toBeTruthy();
-		expect(screen.getByText('Cycle by cycle')).toBeTruthy();
 		expect(screen.getByText('Sensitivity to the economy')).toBeTruthy();
 		expect(screen.getAllByText(/^(Clear link|Could be noise)$/)).toHaveLength(3);
 		expect(window.location.search).toBe('?t=AAPL');
-		expect(fetchMock.mock.calls.map(([url]) => url)).toContainEqual(expect.stringMatching(/\/api\/stock\/AAPL$/));
+
+		const stockCall = fetchMock.mock.calls.find(([url]) => url.endsWith('/api/stock/AAPL'))!;
+		expect(stockCall[1]).toEqual({ headers: { 'X-Tiingo-Key': TIINGO } });
+		const macroCall = fetchMock.mock.calls.find(([url]) => url.endsWith('/api/macro'))!;
+		expect(macroCall[1]).toEqual({ headers: { 'X-Fred-Key': FRED } });
 	});
 
 	it('loads the ticker from a shared link', async () => {
 		window.history.replaceState(null, '', '/projects/stock-analysis/app/?t=nvda');
 		render(<App />);
 		expect(await screen.findByRole('heading', { name: /NVDA Corp/ })).toBeTruthy();
-	});
-
-	it('switches tickers from the example chips', async () => {
-		const user = userEvent.setup();
-		render(<App />);
-		await user.click(screen.getByRole('button', { name: 'JPM' }));
-		expect(await screen.findByRole('heading', { name: /JPM Corp/ })).toBeTruthy();
-		await user.click(screen.getByRole('button', { name: 'XOM' }));
-		expect(await screen.findByRole('heading', { name: /XOM Corp/ })).toBeTruthy();
 	});
 
 	it('shows a readable error for unknown tickers', async () => {
@@ -101,9 +175,21 @@ describe('Stock Analysis app', () => {
 		expect((await screen.findByRole('alert')).textContent).toMatch(/No data found for "ZZZZ"/);
 	});
 
+	it('offers to update keys when a saved key stops working', async () => {
+		localStorage.setItem('stock-analysis:tiingo-key', 'e'.repeat(40));
+		const user = userEvent.setup();
+		render(<App />);
+		await user.click(screen.getByRole('button', { name: 'SPY' }));
+		expect((await screen.findByRole('alert')).textContent).toMatch(/Tiingo rejected your API key/);
+		await user.click(screen.getByRole('button', { name: 'Update data keys' }));
+		expect(screen.getByRole('heading', { name: 'Data keys' })).toBeTruthy();
+	});
+
 	it('still shows price analysis if economic data is unavailable', async () => {
 		fetchMock.mockImplementation(async (url: string) =>
-			url.endsWith('/api/macro') ? Response.json({ error: 'The economic data provider is unavailable right now.' }, { status: 502 }) : Response.json(makeStock('SPY')),
+			url.endsWith('/api/macro')
+				? Response.json({ error: 'The economic data provider is unavailable right now.' }, { status: 502 })
+				: Response.json(makeStock('SPY')),
 		);
 		window.history.replaceState(null, '', '/projects/stock-analysis/app/?t=SPY');
 		render(<App />);

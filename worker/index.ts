@@ -1,79 +1,83 @@
 import { BASE_PATH } from './base';
-import { ProviderError, fetchMacro, fetchStock, normalizeTicker } from './data';
+import { ProviderError, fetchMacro, fetchStock, isFredKey, isTiingoKey, normalizeTicker } from './data';
+import { parsePing } from './ping';
 
-// Serves the app under BASE_PATH and two JSON endpoints:
-//   GET  api/stock/:ticker  — ~30 years of daily prices (Tiingo), cached 12 hours
-//   GET  api/macro          — Fed funds rate, CPI, unemployment (FRED), cached 24 hours
-// API keys stay here as secrets and are never sent to the browser.
+// Serves the app under BASE_PATH plus a small API:
+//   GET  api/stock/:ticker  — relays to Tiingo with the visitor's own key (X-Tiingo-Key)
+//   GET  api/macro          — relays to FRED with the visitor's own key (X-Fred-Key)
+//   POST api/ping           — anonymous, opt-in usage counts
+//
+// Tiingo and FRED don't allow requests straight from browsers (no CORS), so the
+// app sends requests through here. Visitors' keys are used only for that one
+// upstream request: never stored, logged, or shared between visitors.
 
 export interface Env {
 	ASSETS: Fetcher;
-	CACHE: KVNamespace;
+	DB: D1Database;
 	LOOKUP_LIMITER: RateLimit;
-	TIINGO_API_KEY: string;
-	FRED_API_KEY: string;
 }
 
 const BASE_NO_SLASH = BASE_PATH.slice(0, -1);
-const STOCK_TTL = 12 * 60 * 60;
-const MISSING_TTL = 60 * 60;
-const MACRO_TTL = 24 * 60 * 60;
+const MAX_PING_BYTES = 512;
 
-function json(body: unknown, status = 200, maxAge = 0): Response {
+function json(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
 		status,
 		headers: {
 			'Content-Type': 'application/json; charset=utf-8',
-			'Cache-Control': maxAge ? `public, max-age=${maxAge}` : 'no-store',
+			// Responses are fetched with a visitor's own key: never cache them in shared caches.
+			'Cache-Control': 'private, no-store',
 		},
 	});
 }
 
 const errorResponse = (error: string, status: number) => json({ error }, status);
 
-async function handleStock(rawTicker: string, request: Request, env: Env): Promise<Response> {
-	const ticker = normalizeTicker(rawTicker);
-	if (!ticker) return errorResponse('That doesn’t look like a ticker symbol.', 400);
-
-	const key = `stock:v1:${ticker}`;
-	const cached = await env.CACHE.get(key);
-	if (cached === 'missing') return errorResponse(`No data found for "${ticker}". Check the ticker symbol.`, 404);
-	if (cached) return new Response(cached, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
-
-	// Only uncached lookups cost API quota, so only those are rate-limited.
+async function relay(request: Request, env: Env, fetcher: () => Promise<unknown>): Promise<Response> {
 	const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
 	const { success } = await env.LOOKUP_LIMITER.limit({ key: ip });
-	if (!success) return errorResponse('Too many lookups. Please wait a minute and try again.', 429);
-
+	if (!success) return errorResponse('Too many requests. Please wait a minute and try again.', 429);
 	try {
-		const data = await fetchStock(ticker, env.TIINGO_API_KEY);
-		const body = JSON.stringify(data);
-		await env.CACHE.put(key, body, { expirationTtl: STOCK_TTL });
-		return new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
+		return json(await fetcher());
 	} catch (err) {
-		if (err instanceof ProviderError) {
-			if (err.status === 404) await env.CACHE.put(key, 'missing', { expirationTtl: MISSING_TTL });
-			return errorResponse(err.message, err.status);
-		}
-		console.error('stock lookup failed', ticker, err);
-		return errorResponse('Something went wrong fetching that stock.', 500);
+		if (err instanceof ProviderError) return errorResponse(err.message, err.status);
+		console.error('relay failed', err instanceof Error ? err.message : 'unknown error');
+		return errorResponse('Something went wrong fetching data. Please try again.', 500);
 	}
 }
 
-async function handleMacro(env: Env): Promise<Response> {
-	const key = 'macro:v1';
-	const cached = await env.CACHE.get(key);
-	if (cached) return new Response(cached, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
+function handleStock(rawTicker: string, request: Request, env: Env): Promise<Response> | Response {
+	const ticker = normalizeTicker(rawTicker);
+	if (!ticker) return errorResponse('That doesn’t look like a ticker symbol.', 400);
+	const key = request.headers.get('X-Tiingo-Key');
+	if (!isTiingoKey(key)) return errorResponse('Add your Tiingo API key in Data keys to look up stocks.', 401);
+	return relay(request, env, () => fetchStock(ticker, key));
+}
 
+function handleMacro(request: Request, env: Env): Promise<Response> | Response {
+	const key = request.headers.get('X-Fred-Key');
+	if (!isFredKey(key)) return errorResponse('Add your FRED API key in Data keys to load economic data.', 401);
+	return relay(request, env, () => fetchMacro(key));
+}
+
+async function handlePing(request: Request, env: Env): Promise<Response> {
+	const text = await request.text();
+	if (text.length > MAX_PING_BYTES) return new Response(null, { status: 413 });
+	let body: unknown;
 	try {
-		const body = JSON.stringify(await fetchMacro(env.FRED_API_KEY));
-		await env.CACHE.put(key, body, { expirationTtl: MACRO_TTL });
-		return new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
-	} catch (err) {
-		if (err instanceof ProviderError) return errorResponse(err.message, err.status);
-		console.error('macro fetch failed', err);
-		return errorResponse('Something went wrong fetching economic data.', 500);
+		body = JSON.parse(text);
+	} catch {
+		return new Response(null, { status: 400 });
 	}
+	const ping = parsePing(body);
+	if (!ping) return new Response(null, { status: 400 });
+
+	const day = new Date().toISOString().slice(0, 10);
+	// One row per device, event and day: repeated pings on the same day are ignored.
+	await env.DB.prepare('INSERT OR IGNORE INTO events (day, event, anon_id, version) VALUES (?, ?, ?, ?)')
+		.bind(day, ping.event, ping.id, ping.version)
+		.run();
+	return new Response(null, { status: 204 });
 }
 
 export default {
@@ -88,11 +92,15 @@ export default {
 
 		const path = url.pathname.slice(BASE_NO_SLASH.length);
 
+		if (path === '/api/ping') {
+			if (request.method !== 'POST') return new Response(null, { status: 405, headers: { Allow: 'POST' } });
+			return handlePing(request, env);
+		}
 		if (path.startsWith('/api/')) {
 			if (request.method !== 'GET') return new Response(null, { status: 405, headers: { Allow: 'GET' } });
 			const stock = path.match(/^\/api\/stock\/([^/]+)$/);
 			if (stock) return handleStock(stock[1]!, request, env);
-			if (path === '/api/macro') return handleMacro(env);
+			if (path === '/api/macro') return handleMacro(request, env);
 			return errorResponse('Not found', 404);
 		}
 

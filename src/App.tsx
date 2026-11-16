@@ -1,44 +1,89 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
-import { fetchMacro, fetchStock } from './api';
+import { ApiRequestError, fetchMacro, fetchStock } from './api';
 import { monthlyReturns, summarize } from './lib/analysis';
+import { type ApiKeys, loadKeys } from './lib/keys';
+import { type Consent, getConsent, pingActive, setConsent } from './lib/telemetry';
 import type { MacroData, StockData } from './lib/types';
 import { MacroPanel } from './components/MacroPanel';
 import { PriceChart } from './components/PriceChart';
 import { RateCycles } from './components/RateCycles';
+import { Setup } from './components/Setup';
 import { Summary } from './components/Summary';
 
 const EXAMPLES = ['SPY', 'AAPL', 'NVDA', 'JPM', 'INTC', 'XOM'];
 
-type Load<T> = { status: 'idle' } | { status: 'loading' } | { status: 'ready'; data: T } | { status: 'error'; message: string };
+type Load<T> =
+	| { status: 'idle' }
+	| { status: 'loading' }
+	| { status: 'ready'; data: T }
+	| { status: 'error'; message: string; keyProblem: boolean };
 
 const tickerFromUrl = () => new URLSearchParams(window.location.search).get('t')?.toUpperCase() ?? '';
 
+const failed = (err: unknown) => ({
+	status: 'error' as const,
+	message: err instanceof Error ? err.message : 'Something went wrong.',
+	keyProblem: err instanceof ApiRequestError && err.status === 401,
+});
+
+function ConsentBanner({ onAnswer }: { onAnswer: (c: Consent) => void }) {
+	return (
+		<aside className="banner" role="region" aria-label="Usage sharing">
+			<p>
+				<strong>Help decide if this tool is worth building further?</strong> Share an anonymous daily “used the app” count. Never
+				your keys or what you look up. You can change this under Data keys.
+			</p>
+			<div className="actions">
+				<button type="button" className="primary" onClick={() => onAnswer('granted')}>
+					Share anonymous counts
+				</button>
+				<button type="button" className="secondary" onClick={() => onAnswer('denied')}>
+					No thanks
+				</button>
+			</div>
+		</aside>
+	);
+}
+
 export default function App() {
+	const [keys, setKeys] = useState<ApiKeys | null>(loadKeys);
+	const [setupOpen, setSetupOpen] = useState(() => !loadKeys());
+	const [consent, setConsentState] = useState<Consent | null>(getConsent);
 	const [input, setInput] = useState(tickerFromUrl);
 	const [ticker, setTicker] = useState(tickerFromUrl);
 	const [stock, setStock] = useState<Load<StockData>>({ status: 'idle' });
-	const [macro, setMacro] = useState<Load<MacroData>>({ status: 'loading' });
+	const [macro, setMacro] = useState<Load<MacroData>>({ status: 'idle' });
 
 	useEffect(() => {
-		fetchMacro().then(
-			(data) => setMacro({ status: 'ready', data }),
-			(err: Error) => setMacro({ status: 'error', message: err.message }),
-		);
+		void pingActive();
 	}, []);
 
 	useEffect(() => {
-		if (!ticker) return setStock({ status: 'idle' });
+		if (!keys) return setMacro({ status: 'idle' });
 		let cancelled = false;
-		setStock({ status: 'loading' });
-		document.title = `${ticker} · Stock Analysis`;
-		fetchStock(ticker).then(
-			(data) => !cancelled && setStock({ status: 'ready', data }),
-			(err: Error) => !cancelled && setStock({ status: 'error', message: err.message }),
+		setMacro({ status: 'loading' });
+		fetchMacro(keys).then(
+			(data) => !cancelled && setMacro({ status: 'ready', data }),
+			(err: unknown) => !cancelled && setMacro(failed(err)),
 		);
 		return () => {
 			cancelled = true;
 		};
-	}, [ticker]);
+	}, [keys]);
+
+	useEffect(() => {
+		if (!ticker || !keys) return setStock({ status: 'idle' });
+		let cancelled = false;
+		setStock({ status: 'loading' });
+		document.title = `${ticker} · Stock Analysis`;
+		fetchStock(ticker, keys).then(
+			(data) => !cancelled && setStock({ status: 'ready', data }),
+			(err: unknown) => !cancelled && setStock(failed(err)),
+		);
+		return () => {
+			cancelled = true;
+		};
+	}, [ticker, keys]);
 
 	useEffect(() => {
 		const onPop = () => {
@@ -53,6 +98,7 @@ export default function App() {
 		const t = next.trim().toUpperCase();
 		if (!t) return;
 		setInput(t);
+		if (!keys) setSetupOpen(true);
 		if (t === ticker) return;
 		const url = new URL(window.location.href);
 		url.searchParams.set('t', t);
@@ -60,12 +106,14 @@ export default function App() {
 		setTicker(t);
 	}
 
+	function answerConsent(c: Consent) {
+		setConsentState(c);
+		void setConsent(c);
+	}
+
 	const derived = useMemo(() => {
 		if (stock.status !== 'ready') return null;
-		return {
-			summary: summarize(stock.data),
-			returns: monthlyReturns(stock.data.dates, stock.data.adjClose),
-		};
+		return { summary: summarize(stock.data), returns: monthlyReturns(stock.data.dates, stock.data.adjClose) };
 	}, [stock]);
 
 	const macroData = macro.status === 'ready' ? macro.data : null;
@@ -79,10 +127,33 @@ export default function App() {
 					</span>
 					Stock Analysis
 				</a>
-				<a className="muted small" href="/projects/stock-analysis/">
-					About this project
-				</a>
+				<nav className="top-links">
+					<button type="button" className="link-button" onClick={() => setSetupOpen(!setupOpen)} aria-expanded={setupOpen}>
+						{keys ? '🔑 Data keys' : '🔑 Connect keys'}
+					</button>
+					<a className="muted small" href="/projects/stock-analysis/">
+						About
+					</a>
+				</nav>
 			</header>
+
+			{consent === null && <ConsentBanner onAnswer={answerConsent} />}
+
+			{setupOpen && (
+				<Setup
+					keys={keys}
+					onSaved={(k) => {
+						setKeys(k);
+						setSetupOpen(false);
+						setConsentState(getConsent());
+					}}
+					onClose={() => setSetupOpen(false)}
+					onCleared={() => {
+						setKeys(null);
+						setStock({ status: 'idle' });
+					}}
+				/>
+			)}
 
 			<form
 				className="search"
@@ -114,7 +185,7 @@ export default function App() {
 			</div>
 
 			<main>
-				{stock.status === 'idle' && (
+				{stock.status === 'idle' && !setupOpen && (
 					<section className="card intro">
 						<h2>How does a stock behave when the Fed moves?</h2>
 						<p>
@@ -130,9 +201,14 @@ export default function App() {
 					</p>
 				)}
 				{stock.status === 'error' && (
-					<p className="status error" role="alert">
-						{stock.message}
-					</p>
+					<div className="status error" role="alert">
+						<p>{stock.message}</p>
+						{stock.keyProblem && (
+							<button type="button" className="secondary" onClick={() => setSetupOpen(true)}>
+								Update data keys
+							</button>
+						)}
+					</div>
 				)}
 				{stock.status === 'ready' && derived && (
 					<>
@@ -144,9 +220,14 @@ export default function App() {
 								<MacroPanel ticker={stock.data.ticker} returns={derived.returns} macro={macroData} />
 							</>
 						) : (
-							<p className="status">
-								{macro.status === 'loading' ? 'Loading economic data…' : `Economic data unavailable: ${macro.status === 'error' ? macro.message : ''}`}
-							</p>
+							<div className="status">
+								<p>{macro.status === 'error' ? `Economic data unavailable: ${macro.message}` : 'Loading economic data…'}</p>
+								{macro.status === 'error' && macro.keyProblem && (
+									<button type="button" className="secondary" onClick={() => setSetupOpen(true)}>
+										Update data keys
+									</button>
+								)}
+							</div>
 						)}
 					</>
 				)}
@@ -155,8 +236,8 @@ export default function App() {
 			<footer className="foot">
 				<p>
 					Prices from <a href="https://www.tiingo.com">Tiingo</a>, adjusted for splits and dividends. Economic data from{' '}
-					<a href="https://fred.stlouisfed.org">FRED</a>, Federal Reserve Bank of St. Louis. This product uses the FRED® API but is
-					not endorsed or certified by the Federal Reserve Bank of St. Louis.
+					<a href="https://fred.stlouisfed.org">FRED</a>, Federal Reserve Bank of St. Louis, using your own API keys. This product
+					uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.
 				</p>
 				<p>For education only, not investment advice. Past performance doesn’t predict future results.</p>
 			</footer>

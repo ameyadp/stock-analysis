@@ -11,6 +11,11 @@ export function normalizeTicker(raw: string): string | null {
 	return /^[A-Z][A-Z0-9]{0,6}([.-][A-Z0-9]{1,3})?$/.test(t) ? t : null;
 }
 
+/** Tiingo API tokens are 40 hex characters. */
+export const isTiingoKey = (k: string | null): k is string => !!k && /^[0-9a-f]{40}$/i.test(k);
+/** FRED API keys are 32 lowercase letters and digits. */
+export const isFredKey = (k: string | null): k is string => !!k && /^[0-9a-z]{32}$/.test(k);
+
 export function startDate(now: Date, years: number): string {
 	return `${now.getUTCFullYear() - years}-01-01`;
 }
@@ -68,8 +73,13 @@ export async function fetchStock(ticker: string, apiKey: string, now = new Date(
 	]);
 
 	for (const res of [metaRes, pricesRes]) {
+		if (res.status === 401 || res.status === 403) {
+			throw new ProviderError('Tiingo rejected your API key. Check it in Data keys.', 401);
+		}
 		if (res.status === 404) throw new ProviderError(`No data found for "${ticker}". Check the ticker symbol.`, 404);
-		if (res.status === 429) throw new ProviderError('The daily data limit has been reached. Please try again later.', 503);
+		if (res.status === 429) {
+			throw new ProviderError('Your Tiingo key has reached its usage limit. Try again later, or check your Tiingo plan.', 429);
+		}
 		if (!res.ok) throw new ProviderError('The stock data provider is unavailable right now. Please try again later.', 502);
 	}
 
@@ -106,7 +116,13 @@ export async function fetchMacro(apiKey: string, now = new Date()): Promise<Macr
 				`https://api.stlouisfed.org/fred/series/observations?series_id=${id}` +
 				`&observation_start=${start}&frequency=m&file_type=json&api_key=${encodeURIComponent(apiKey)}`;
 			const res = await fetch(url);
-			if (!res.ok) throw new ProviderError('The economic data provider is unavailable right now.', 502);
+			if (!res.ok) {
+				// FRED answers an unknown or malformed key with 400 and an error_message mentioning api_key.
+				const message = ((await res.json().catch(() => ({}))) as { error_message?: string }).error_message ?? '';
+				if (res.status === 400 && /api_key/i.test(message)) throw new ProviderError('FRED rejected your API key. Check it in Data keys.', 401);
+				if (res.status === 429) throw new ProviderError('Your FRED key has reached its usage limit. Try again in a minute.', 429);
+				throw new ProviderError('The economic data provider is unavailable right now.', 502);
+			}
 			return [key, parseFred((await res.json()) as FredResponse)] as const;
 		}),
 	);
