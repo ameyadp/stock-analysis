@@ -1,0 +1,35 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "stock-analysis",
+	"main": "worker/index.ts",
+	"compatibility_date": "2026-11-01",
+	// Only reachable through ameyapurandare.com/projects/stock-analysis/app/,
+	// which forwards to this Worker via a service binding.
+	"workers_dev": false,
+	"preview_urls": false,
+	"assets": {
+		"directory": "./dist",
+		"not_found_handling": "single-page-application",
+		"binding": "ASSETS",
+		// Every request goes through the Worker, which strips the URL prefix (see worker/base.ts).
+		"run_worker_first": true
+	},
+	// Market and macro data are cached here so the free API quotas go a long way.
+	"kv_namespaces": [
+		{
+			"binding": "CACHE",
+			"id": "319c30cdb587437cb752444b409c90f9"
+		}
+	],
+	// Limits how fast one visitor can look up tickers that aren't cached yet.
+	"ratelimits": [
+		{
+			"name": "LOOKUP_LIMITER",
+			"namespace_id": "1001",
+			"simple": { "limit": 20, "period": 60 }
+		}
+	]
+	// Secrets (set with `npx wrangler secret put <NAME>`, or in .dev.vars locally):
+	//   TIINGO_API_KEY  — daily stock prices (https://www.tiingo.com)
+	//   FRED_API_KEY    — Fed funds rate, CPI, unemployment (https://fred.stlouisfed.org)
+}
