@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { pingActive, pingInstall, setConsent } from '../src/lib/telemetry';
+import { pingActive, pingInstall, pingOpen, setConsent } from '../src/lib/telemetry';
 
 const sent = () => fetchMock.mock.calls.map(([, init]) => JSON.parse(init!.body as string));
 const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(null, { status: 204 }));
@@ -18,6 +18,18 @@ afterEach(() => {
 });
 
 describe('usage counting', () => {
+	it('always counts one open per session, without the device’s ID, split by installed app vs browser', async () => {
+		sessionStorage.clear();
+		await pingOpen(false);
+		await pingOpen(false); // same session: not counted again
+		sessionStorage.clear(); // a new session, e.g. launching the installed app
+		await pingOpen(true);
+		const events = sent();
+		expect(events.map((e) => e.event)).toEqual(['open_web', 'open_app']);
+		expect(events[0].id).not.toBe(events[1].id);
+		expect(localStorage.getItem('stock-analysis:anon-id')).toBeNull();
+	});
+
 	it('always counts an install, once per device, without the device’s ID', async () => {
 		await pingInstall();
 		await pingInstall();

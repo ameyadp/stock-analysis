@@ -52,8 +52,10 @@ export function PriceChart({ stock, macro }: { stock: StockData; macro: MacroDat
 			scales: { x: { time: true }, y: { distr: logScale ? 3 : 1 }, rate: { range: (_u, _min, max) => [0, Math.max(6, Math.ceil(max ?? 6))] } },
 			axes: [
 				axis,
-				{ ...axis, values: (_u, vals) => vals.map((v) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`)), size: 60 },
-				{ ...axis, scale: 'rate', side: 1, grid: { show: false }, values: (_u, vals) => vals.map((v) => `${v}%`), show: showFed },
+				{ ...axis, // Log scales leave some tick values empty (null); show no label for those.
+					values: (_u, vals) => vals.map((v) => (v == null ? '' : v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`)),
+					size: 60 },
+				{ ...axis, scale: 'rate', side: 1, grid: { show: false }, values: (_u, vals) => vals.map((v) => (v == null ? '' : `${v}%`)), show: showFed },
 			],
 			series: [
 				{ value: (_u, v) => (v == null ? '—' : dateLabel(new Date(v * 1000).toISOString().slice(0, 10))) },

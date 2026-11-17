@@ -67,6 +67,9 @@ const saveKeys = () => {
 beforeEach(() => {
 	localStorage.clear();
 	localStorage.setItem('stock-analysis:telemetry-consent', 'denied');
+	// Most tests start past the browser overview screen, as someone who chose "Continue in browser".
+	sessionStorage.clear();
+	sessionStorage.setItem('stock-analysis:continue-in-browser', '1');
 	fetchMock.mockClear();
 	vi.stubGlobal('fetch', fetchMock);
 	window.history.replaceState(null, '', '/projects/stock-analysis/app/');
@@ -199,13 +202,33 @@ describe('analysis with saved keys', () => {
 	});
 });
 
+describe('overview in the browser', () => {
+	it('shows the overview first, and continues to the app when asked', async () => {
+		sessionStorage.clear();
+		const user = userEvent.setup();
+		render(<App />);
+		expect(screen.getByRole('heading', { name: 'Stock Analysis', level: 1 })).toBeTruthy();
+		expect(screen.getByRole('img', { name: 'Screenshot of Stock Analysis' })).toBeTruthy();
+		await user.click(screen.getByRole('button', { name: 'Continue in browser' }));
+		expect(screen.getByRole('heading', { name: 'Connect your free data keys' })).toBeTruthy();
+	});
+
+	it('opens the install screen from the overview', async () => {
+		sessionStorage.clear();
+		const user = userEvent.setup();
+		render(<App />);
+		await user.click(screen.getByRole('button', { name: 'Install app' }));
+		expect(screen.getByRole('dialog', { name: 'Install Stock Analysis' }).textContent).toMatch(/Usage counting is required/);
+	});
+});
+
 describe('installing', () => {
 	it('opens the install screen with the required notice from the website’s Install link', async () => {
 		window.history.replaceState(null, '', '/projects/stock-analysis/app/?install=1');
 		const user = userEvent.setup();
 		render(<App />);
 		const dialog = screen.getByRole('dialog', { name: 'Install Stock Analysis' });
-		expect(dialog.textContent).toMatch(/Install counting is required/);
+		expect(dialog.textContent).toMatch(/Usage counting is required/);
 		expect(window.location.search).toBe(''); // the flag is removed from the address
 		await user.keyboard('{Escape}');
 		expect(screen.queryByRole('dialog')).toBeNull();

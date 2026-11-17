@@ -7,8 +7,8 @@ const APP = 'Stock Analysis';
 export function InstallNotice() {
 	return (
 		<p className="install-notice">
-			<strong>Install counting is required.</strong> Installing {APP} sends one anonymous count: just the word “install” and the app
-			version, with no ID and none of your data. It can’t be turned off.
+			<strong>Usage counting is required.</strong> Installing {APP} sends one anonymous count, and so does each session you use it:
+			just the event (“install” or “open”) and the app version, with no ID and none of your data. It can’t be turned off.
 		</p>
 	);
 }
@@ -121,8 +121,8 @@ export function InstalledNotice({ onClose }: { onClose: () => void }) {
 	return (
 		<aside className="banner" role="region" aria-label="Install notice">
 			<p>
-				<strong>Thanks for installing {APP}.</strong> Installs are counted anonymously: just the word “install” and the app version,
-				with no ID and none of your data. This is required and can’t be turned off.
+				<strong>Thanks for installing {APP}.</strong> Installs and app opens are counted anonymously: just the event (“install” or
+				“open”) and the app version, with no ID and none of your data. This is required and can’t be turned off.
 			</p>
 			<div className="actions">
 				<button

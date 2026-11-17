@@ -1,13 +1,14 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { ApiRequestError, fetchMacro, fetchStock } from './api';
 import { monthlyReturns, summarize } from './lib/analysis';
-import { installNoticeSeen, isStandalone, takeInstallRequest } from './lib/install';
+import { continueInBrowser, installNoticeSeen, isStandalone, shouldShowIntro, takeInstallRequest } from './lib/install';
 import { type ApiKeys, loadKeys } from './lib/keys';
 import { type Consent, getConsent, pingActive, setConsent } from './lib/telemetry';
 import type { MacroData, StockData } from './lib/types';
 import { MacroPanel } from './components/MacroPanel';
 import { PriceChart } from './components/PriceChart';
 import { RateCycles } from './components/RateCycles';
+import { AppIntro } from './components/AppIntro';
 import { InstallDialog, InstalledNotice } from './components/InstallDialog';
 import { Setup } from './components/Setup';
 import { Summary } from './components/Summary';
@@ -56,6 +57,7 @@ export default function App() {
 	const [stock, setStock] = useState<Load<StockData>>({ status: 'idle' });
 	const [macro, setMacro] = useState<Load<MacroData>>({ status: 'idle' });
 	const [installOpen, setInstallOpen] = useState(takeInstallRequest);
+	const [introOpen, setIntroOpen] = useState(shouldShowIntro);
 	const [showInstalledNotice, setShowInstalledNotice] = useState(() => isStandalone() && !installNoticeSeen());
 
 	useEffect(() => {
@@ -121,6 +123,21 @@ export default function App() {
 	}, [stock]);
 
 	const macroData = macro.status === 'ready' ? macro.data : null;
+
+	if (introOpen) {
+		return (
+			<>
+				<AppIntro
+					onInstall={() => setInstallOpen(true)}
+					onContinue={() => {
+						continueInBrowser();
+						setIntroOpen(false);
+					}}
+				/>
+				{installOpen && <InstallDialog onClose={() => setInstallOpen(false)} />}
+			</>
+		);
+	}
 
 	return (
 		<div className="app">

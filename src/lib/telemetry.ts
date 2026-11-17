@@ -2,7 +2,7 @@ import { read, remove, write } from './storage';
 
 // Anonymous usage counting (same scheme as the Finance Tracker).
 //
-// Installs are always counted: the app sends "install", the app version, and a
+// Installs and app opens are always counted: the app sends "install", the app version, and a
 // one-off random number that isn't stored, so it can't be linked to anything else.
 //
 // Everything else is opt-in: a random ID kept in this browser, the event name,
@@ -11,7 +11,7 @@ import { read, remove, write } from './storage';
 // Never tickers, API keys, or anything else about what was looked at.
 
 export type Consent = 'granted' | 'denied';
-export type TelemetryEvent = 'active' | 'opt_in' | 'setup_complete' | 'install';
+export type TelemetryEvent = 'active' | 'opt_in' | 'setup_complete' | 'install' | 'open_app' | 'open_web';
 
 const CONSENT = 'stock-analysis:telemetry-consent';
 const ANON_ID = 'stock-analysis:anon-id';
@@ -77,4 +77,17 @@ const INSTALL_COUNTED = 'stock-analysis:install-counted';
 export async function pingInstall(): Promise<void> {
 	if (read(INSTALL_COUNTED)) return;
 	if (await post('install', crypto.randomUUID())) write(INSTALL_COUNTED, '1');
+}
+
+const OPEN_COUNTED = 'stock-analysis:open-counted';
+
+/** Count one app open per session (installed app or browser tab). Always sent, without the device's ID. */
+export async function pingOpen(installed: boolean): Promise<void> {
+	try {
+		if (sessionStorage.getItem(OPEN_COUNTED)) return;
+		sessionStorage.setItem(OPEN_COUNTED, '1');
+	} catch {
+		// storage unavailable: still count
+	}
+	await post(installed ? 'open_app' : 'open_web', crypto.randomUUID());
 }

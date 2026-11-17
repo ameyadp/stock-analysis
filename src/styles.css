@@ -735,3 +735,108 @@ button.small {
 	background: var(--accent);
 	color: #fff;
 }
+
+/* ---------- Overview (browser, not installed) ---------- */
+
+.intro-page {
+	max-width: 880px;
+	margin: 0 auto;
+	padding: 32px 16px 48px;
+}
+
+.intro-head {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.intro-head img {
+	border-radius: 14px;
+	flex: none;
+}
+
+.intro-head h1 {
+	margin: 0;
+	font-size: 1.9rem;
+	line-height: 1.2;
+}
+
+.intro-tagline {
+	margin: 4px 0 0;
+	color: var(--muted);
+	font-size: 1.05rem;
+}
+
+.intro-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin: 24px 0 8px;
+}
+
+.intro-actions button {
+	font: inherit;
+	font-weight: 600;
+	font-size: 1.05rem;
+	padding: 12px 22px;
+	border-radius: 10px;
+	cursor: pointer;
+	min-height: 0;
+}
+
+.intro-primary {
+	border: 1px solid var(--intro-accent);
+	background: var(--intro-accent);
+	color: #fff;
+}
+
+.intro-secondary {
+	border: 1px solid var(--intro-accent);
+	background: transparent;
+	color: var(--intro-accent);
+}
+
+.intro-why {
+	margin: 0 0 24px;
+	color: var(--muted);
+	font-size: 0.92rem;
+}
+
+.intro-shot {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 14px;
+	border: 1px solid var(--border);
+	box-shadow: 0 8px 30px rgba(16, 24, 40, 0.12);
+}
+
+.intro-features {
+	list-style: none;
+	padding: 0;
+	margin: 28px 0 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 16px;
+}
+
+.intro-features li {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.intro-features span {
+	color: var(--muted);
+	font-size: 0.95rem;
+}
+
+.intro-foot {
+	margin-top: 28px;
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+
+.intro-page {
+	--intro-accent: var(--accent);
+}

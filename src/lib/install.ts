@@ -83,3 +83,23 @@ export function takeInstallRequest(): boolean {
 	window.history.replaceState(null, '', url);
 	return true;
 }
+
+const CONTINUE_IN_BROWSER = 'stock-analysis:continue-in-browser';
+
+/** Whether to show the overview screen: only in a browser tab, until the person chooses to continue there. */
+export function shouldShowIntro(): boolean {
+	if (isStandalone()) return false;
+	try {
+		return sessionStorage.getItem(CONTINUE_IN_BROWSER) !== '1';
+	} catch {
+		return false;
+	}
+}
+
+export function continueInBrowser(): void {
+	try {
+		sessionStorage.setItem(CONTINUE_IN_BROWSER, '1');
+	} catch {
+		// ignore
+	}
+}

@@ -16,8 +16,18 @@ function query(sql) {
 
 const sections = [
 	[
+		'App opens per day, last 14 days (everyone, anonymous)',
+		`SELECT day,
+			SUM(event = 'open_app') AS installed_app,
+			SUM(event = 'open_web') AS browser,
+			COUNT(*) AS total
+		 FROM events WHERE event IN ('open_app', 'open_web') AND day >= date('now', '-13 days')
+		 GROUP BY day ORDER BY day`,
+	],
+	[
 		'Totals',
 		`SELECT
+			(SELECT COUNT(*) FROM events WHERE event IN ('open_app', 'open_web') AND day >= date('now', '-6 days')) AS opens_last_7_days,
 			(SELECT COUNT(DISTINCT anon_id) FROM events WHERE event = 'opt_in')  AS opted_in_devices,
 			(SELECT COUNT(DISTINCT anon_id) FROM events WHERE event = 'setup_complete') AS set_up_keys,
 			(SELECT COUNT(DISTINCT anon_id) FROM events WHERE event = 'install') AS installs,

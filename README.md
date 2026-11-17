@@ -34,7 +34,7 @@ The statistics use **changes**, not levels: two series that both trend over deca
 
 Same scheme as the Finance Tracker:
 
-- **Installs are always counted.** The app sends `install`, the app version and a one-off random number that isn't stored, so an install can't be linked to anything else.
+- **Installs and opens are always counted.** The app sends `install` (once per device) or `open_app` / `open_web` (once per session, installed app vs. browser tab), the app version and a one-off random number that isn't stored, so a count can't be linked to anything else.
 - **Everything else is opt-in.** On first visit, people are asked whether to share anonymous usage counts. If they opt in, the app sends a random ID kept in their browser, the app version and one of these events:
   - `opt_in`
   - `active`, at most once a day
@@ -43,7 +43,7 @@ Same scheme as the Finance Tracker:
 It never sends keys, tickers or anything they look up.
 
 ```bash
-npm run stats     # opted-in devices, key setups, daily/weekly/monthly actives, retention
+npm run stats   # includes app opens per day (installed vs browser)     # opted-in devices, key setups, daily/weekly/monthly actives, retention
 ```
 
 ## Development
