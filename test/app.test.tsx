@@ -198,3 +198,18 @@ describe('analysis with saved keys', () => {
 		expect(screen.queryByText('Through Fed rate cycles')).toBeNull();
 	});
 });
+
+describe('installing', () => {
+	it('opens the install screen with the required notice from the website’s Install link', async () => {
+		window.history.replaceState(null, '', '/projects/stock-analysis/app/?install=1');
+		const user = userEvent.setup();
+		render(<App />);
+		const dialog = screen.getByRole('dialog', { name: 'Install Stock Analysis' });
+		expect(dialog.textContent).toMatch(/Install counting is required/);
+		expect(window.location.search).toBe(''); // the flag is removed from the address
+		await user.keyboard('{Escape}');
+		expect(screen.queryByRole('dialog')).toBeNull();
+		await user.click(screen.getByRole('button', { name: 'Install app' }));
+		expect(screen.getByRole('dialog', { name: 'Install Stock Analysis' })).toBeTruthy();
+	});
+});

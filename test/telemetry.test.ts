@@ -18,13 +18,13 @@ afterEach(() => {
 });
 
 describe('usage counting', () => {
-	it('always counts installs, without the browser’s ID', async () => {
+	it('always counts an install, once per device, without the device’s ID', async () => {
 		await pingInstall();
 		await pingInstall();
-		const [a, b] = sent();
-		expect(a).toMatchObject({ event: 'install' });
-		expect(a.id).not.toBe(b.id); // a fresh random number each time
-		expect(localStorage.getItem('stock-analysis:anon-id')).toBeNull(); // nothing stored
+		const events = sent();
+		expect(events).toHaveLength(1);
+		expect(events[0]).toMatchObject({ event: 'install' });
+		expect(localStorage.getItem('stock-analysis:install-counted')).toBe('1');
 	});
 
 	it('sends nothing else without consent', async () => {

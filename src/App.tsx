@@ -1,12 +1,14 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { ApiRequestError, fetchMacro, fetchStock } from './api';
 import { monthlyReturns, summarize } from './lib/analysis';
+import { installNoticeSeen, isStandalone, takeInstallRequest } from './lib/install';
 import { type ApiKeys, loadKeys } from './lib/keys';
 import { type Consent, getConsent, pingActive, setConsent } from './lib/telemetry';
 import type { MacroData, StockData } from './lib/types';
 import { MacroPanel } from './components/MacroPanel';
 import { PriceChart } from './components/PriceChart';
 import { RateCycles } from './components/RateCycles';
+import { InstallDialog, InstalledNotice } from './components/InstallDialog';
 import { Setup } from './components/Setup';
 import { Summary } from './components/Summary';
 
@@ -17,10 +19,6 @@ type Load<T> =
 	| { status: 'loading' }
 	| { status: 'ready'; data: T }
 	| { status: 'error'; message: string; keyProblem: boolean };
-
-interface InstallPromptEvent extends Event {
-	prompt: () => Promise<void>;
-}
 
 const tickerFromUrl = () => new URLSearchParams(window.location.search).get('t')?.toUpperCase() ?? '';
 
@@ -57,22 +55,11 @@ export default function App() {
 	const [ticker, setTicker] = useState(tickerFromUrl);
 	const [stock, setStock] = useState<Load<StockData>>({ status: 'idle' });
 	const [macro, setMacro] = useState<Load<MacroData>>({ status: 'idle' });
-	const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
+	const [installOpen, setInstallOpen] = useState(takeInstallRequest);
+	const [showInstalledNotice, setShowInstalledNotice] = useState(() => isStandalone() && !installNoticeSeen());
 
 	useEffect(() => {
 		void pingActive();
-		// Chrome/Edge offer installing as an app; keep the prompt for our own button.
-		const onPrompt = (e: Event) => {
-			e.preventDefault();
-			setInstallPrompt(e as InstallPromptEvent);
-		};
-		const onInstalled = () => setInstallPrompt(null);
-		window.addEventListener('beforeinstallprompt', onPrompt);
-		window.addEventListener('appinstalled', onInstalled);
-		return () => {
-			window.removeEventListener('beforeinstallprompt', onPrompt);
-			window.removeEventListener('appinstalled', onInstalled);
-		};
 	}, []);
 
 	useEffect(() => {
@@ -145,15 +132,8 @@ export default function App() {
 					Stock Analysis
 				</a>
 				<nav className="top-links">
-					{installPrompt && (
-						<button
-							type="button"
-							className="secondary small"
-							onClick={() => {
-								void installPrompt.prompt();
-								setInstallPrompt(null);
-							}}
-						>
+					{!isStandalone() && (
+						<button type="button" className="secondary small" onClick={() => setInstallOpen(true)}>
 							Install app
 						</button>
 					)}
@@ -166,7 +146,9 @@ export default function App() {
 				</nav>
 			</header>
 
+			{showInstalledNotice && <InstalledNotice onClose={() => setShowInstalledNotice(false)} />}
 			{consent === null && <ConsentBanner onAnswer={answerConsent} />}
+			{installOpen && <InstallDialog onClose={() => setInstallOpen(false)} />}
 
 			{setupOpen && (
 				<Setup

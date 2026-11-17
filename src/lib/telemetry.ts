@@ -71,5 +71,10 @@ export async function setConsent(consent: Consent): Promise<void> {
 }
 
 export const pingSetupComplete = () => send('setup_complete');
-/** Count an install. Always sent, without the browser's ID. */
-export const pingInstall = () => post('install', crypto.randomUUID());
+const INSTALL_COUNTED = 'stock-analysis:install-counted';
+
+/** Count an install, once per device. Always sent, without the browser's ID. */
+export async function pingInstall(): Promise<void> {
+	if (read(INSTALL_COUNTED)) return;
+	if (await post('install', crypto.randomUUID())) write(INSTALL_COUNTED, '1');
+}

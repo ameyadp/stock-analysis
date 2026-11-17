@@ -104,8 +104,24 @@ export default {
 			return errorResponse('Not found', 404);
 		}
 
-		url.pathname = path;
+		// The app's page is served at its folder; asking for index.html explicitly would
+		// otherwise redirect to "/", which the browser resolves to the website's homepage.
+		url.pathname = path === '/index.html' ? '/' : path;
 		const asset = await env.ASSETS.fetch(new Request(url, request));
+
+		// Keep any redirect from the static files inside the app's path.
+		const location = asset.headers.get('Location');
+		if (asset.status >= 300 && asset.status < 400 && location) {
+			const target = new URL(location, url);
+			if (target.origin === url.origin && !target.pathname.startsWith(BASE_PATH)) {
+				target.pathname = BASE_NO_SLASH + target.pathname;
+				const headers = new Headers(asset.headers);
+				headers.set('Location', target.toString());
+				return new Response(null, { status: asset.status, headers });
+			}
+			return asset;
+		}
+
 		// Unknown page addresses show the app; unknown files (e.g. an old script) stay a 404.
 		if (asset.status === 404 && !/\.[a-z0-9]+$/i.test(path)) {
 			url.pathname = '/';
