@@ -6,7 +6,7 @@ How a US stock or ETF has behaved over up to 30 years, and how it relates to the
 - **Through Fed rate cycles:** annualized returns while the Fed was hiking, on hold, or cutting, plus a cycle-by-cycle table.
 - **Sensitivity to the economy:** a regression of monthly returns on same-month changes in the Fed funds rate, inflation and unemployment, with plain-English results, significance, and a rolling 3-year correlation to show whether the link is stable.
 
-Live at **https://ameyapurandare.com/projects/stock-analysis/app/**
+Live at **https://ameyapurandare.com/projects/stock-analysis/app/**. It installs as an app on desktop and mobile (PWA), and stocks you've already looked up open offline.
 
 ## Bring your own (free) keys
 
@@ -37,6 +37,7 @@ Same scheme as the Finance Tracker. On first visit, people are asked whether to 
 - `opt_in`
 - `active`, at most once a day
 - `setup_complete`, when they've added working keys
+- `install`, when they install it as an app
 
 It never sends keys, tickers or anything they look up.
 

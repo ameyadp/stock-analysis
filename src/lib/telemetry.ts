@@ -7,7 +7,7 @@ import { read, remove, write } from './storage';
 // anything else about what was looked at. At most one "active" ping per day.
 
 export type Consent = 'granted' | 'denied';
-export type TelemetryEvent = 'active' | 'opt_in' | 'setup_complete';
+export type TelemetryEvent = 'active' | 'opt_in' | 'setup_complete' | 'install';
 
 const CONSENT = 'stock-analysis:telemetry-consent';
 const ANON_ID = 'stock-analysis:anon-id';
@@ -64,3 +64,4 @@ export async function setConsent(consent: Consent): Promise<void> {
 }
 
 export const pingSetupComplete = () => send('setup_complete');
+export const pingInstall = () => send('install');

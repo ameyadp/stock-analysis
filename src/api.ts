@@ -36,7 +36,9 @@ async function get<T>(path: string, headers: Record<string, string>, ttl: number
 	try {
 		res = await fetch(url, { headers });
 	} catch {
-		throw new ApiRequestError('Couldn’t reach the server. Check your connection and try again.', 0);
+		// Offline: fall back to the last saved copy, however old.
+		if (hit) return (await hit.json()) as T;
+		throw new ApiRequestError('You’re offline, and this hasn’t been looked up on this device before.', 0);
 	}
 	const text = await res.text();
 	let body: T | ApiError | null = null;

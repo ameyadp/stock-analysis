@@ -18,6 +18,10 @@ type Load<T> =
 	| { status: 'ready'; data: T }
 	| { status: 'error'; message: string; keyProblem: boolean };
 
+interface InstallPromptEvent extends Event {
+	prompt: () => Promise<void>;
+}
+
 const tickerFromUrl = () => new URLSearchParams(window.location.search).get('t')?.toUpperCase() ?? '';
 
 const failed = (err: unknown) => ({
@@ -53,9 +57,22 @@ export default function App() {
 	const [ticker, setTicker] = useState(tickerFromUrl);
 	const [stock, setStock] = useState<Load<StockData>>({ status: 'idle' });
 	const [macro, setMacro] = useState<Load<MacroData>>({ status: 'idle' });
+	const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
 
 	useEffect(() => {
 		void pingActive();
+		// Chrome/Edge offer installing as an app; keep the prompt for our own button.
+		const onPrompt = (e: Event) => {
+			e.preventDefault();
+			setInstallPrompt(e as InstallPromptEvent);
+		};
+		const onInstalled = () => setInstallPrompt(null);
+		window.addEventListener('beforeinstallprompt', onPrompt);
+		window.addEventListener('appinstalled', onInstalled);
+		return () => {
+			window.removeEventListener('beforeinstallprompt', onPrompt);
+			window.removeEventListener('appinstalled', onInstalled);
+		};
 	}, []);
 
 	useEffect(() => {
@@ -128,6 +145,18 @@ export default function App() {
 					Stock Analysis
 				</a>
 				<nav className="top-links">
+					{installPrompt && (
+						<button
+							type="button"
+							className="secondary small"
+							onClick={() => {
+								void installPrompt.prompt();
+								setInstallPrompt(null);
+							}}
+						>
+							Install app
+						</button>
+					)}
 					<button type="button" className="link-button" onClick={() => setSetupOpen(!setupOpen)} aria-expanded={setupOpen}>
 						{keys ? '🔑 Data keys' : '🔑 Connect keys'}
 					</button>

@@ -670,3 +670,8 @@ button.secondary.danger {
 .status p {
 	margin: 0 0 8px;
 }
+
+button.small {
+	padding: 4px 12px;
+	font-size: 0.875rem;
+}

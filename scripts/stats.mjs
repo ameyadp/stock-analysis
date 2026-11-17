@@ -20,6 +20,7 @@ const sections = [
 		`SELECT
 			(SELECT COUNT(DISTINCT anon_id) FROM events WHERE event = 'opt_in')  AS opted_in_devices,
 			(SELECT COUNT(DISTINCT anon_id) FROM events WHERE event = 'setup_complete') AS set_up_keys,
+			(SELECT COUNT(DISTINCT anon_id) FROM events WHERE event = 'install') AS installs,
 			(SELECT COUNT(DISTINCT anon_id) FROM events WHERE event = 'active' AND day >= date('now', '-6 days'))  AS weekly_active,
 			(SELECT COUNT(DISTINCT anon_id) FROM events WHERE event = 'active' AND day >= date('now', '-29 days')) AS monthly_active`,
 	],

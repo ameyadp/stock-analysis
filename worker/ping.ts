@@ -1,6 +1,6 @@
 // Validation for anonymous usage pings, kept separate from the Worker so it can be unit-tested.
 
-export const EVENTS = ['active', 'opt_in', 'setup_complete'] as const;
+export const EVENTS = ['active', 'opt_in', 'setup_complete', 'install'] as const;
 export type PingEvent = (typeof EVENTS)[number];
 
 export interface Ping {

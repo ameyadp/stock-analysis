@@ -64,7 +64,8 @@ describe('data parsing', () => {
 	it('validates usage pings', () => {
 		const id = '3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b';
 		expect(parsePing({ id, event: 'setup_complete', v: '0.2.0' })).toEqual({ id, event: 'setup_complete', version: '0.2.0' });
-		expect(parsePing({ id, event: 'install', v: '0.2.0' })).toBeNull();
+		expect(parsePing({ id, event: 'install', v: '0.3.0' })).toEqual({ id, event: 'install', version: '0.3.0' });
+		expect(parsePing({ id, event: 'uninstall', v: '0.2.0' })).toBeNull();
 		expect(parsePing({ id: 'nope', event: 'active', v: '0.2.0' })).toBeNull();
 		expect(parsePing({ id, event: 'active', v: '<b>' })).toBeNull();
 	});
