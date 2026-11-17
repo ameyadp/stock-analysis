@@ -140,7 +140,7 @@ export default function App() {
 					<button type="button" className="link-button" onClick={() => setSetupOpen(!setupOpen)} aria-expanded={setupOpen}>
 						{keys ? '🔑 Data keys' : '🔑 Connect keys'}
 					</button>
-					<a className="muted small" href="/projects/stock-analysis/">
+					<a className="muted small" href="/projects/stock-analysis/" target="_blank" rel="noopener">
 						About
 					</a>
 				</nav>
@@ -246,8 +246,8 @@ export default function App() {
 
 			<footer className="foot">
 				<p>
-					Prices from <a href="https://www.tiingo.com">Tiingo</a>, adjusted for splits and dividends. Economic data from{' '}
-					<a href="https://fred.stlouisfed.org">FRED</a>, Federal Reserve Bank of St. Louis, using your own API keys. This product
+					Prices from <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer">Tiingo</a>, adjusted for splits and dividends. Economic data from{' '}
+					<a href="https://fred.stlouisfed.org" target="_blank" rel="noopener noreferrer">FRED</a>, Federal Reserve Bank of St. Louis, using your own API keys. This product
 					uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.
 				</p>
 				<p>For education only, not investment advice. Past performance doesn’t predict future results.</p>

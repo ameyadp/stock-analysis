@@ -31,6 +31,8 @@ export default defineConfig({
 				],
 			},
 			workbox: {
+				// Network-first app page + one-time repair of windows stuck on the website homepage.
+				importScripts: ['sw-heal.js'],
 				// Data and usage pings always go to the network; the app caches data itself.
 				navigateFallbackDenylist: [/\/api\//],
 			},
