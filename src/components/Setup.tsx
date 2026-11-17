@@ -175,7 +175,8 @@ export function Setup({ keys, onSaved, onClose, onCleared }: Props) {
 				</label>
 				<p className="muted small">
 					If on, the app sends a random ID, the app version, and “active” once a day you use it, so the developer can see whether
-					it’s worth building further. Never your keys, tickers, or anything you look up.
+					it’s worth building further. Never your keys, tickers, or anything you look up. Installing the app is always counted,
+					as just the word “install” and the app version, with no ID.
 				</p>
 			</div>
 		</section>

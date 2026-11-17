@@ -1,10 +1,14 @@
 import { read, remove, write } from './storage';
 
-// Anonymous, opt-in usage counting (same scheme as the Finance Tracker).
+// Anonymous usage counting (same scheme as the Finance Tracker).
 //
-// What is sent (only if the visitor opts in): a random ID created in this
-// browser, the event name, and the app version. Never tickers, API keys, or
-// anything else about what was looked at. At most one "active" ping per day.
+// Installs are always counted: the app sends "install", the app version, and a
+// one-off random number that isn't stored, so it can't be linked to anything else.
+//
+// Everything else is opt-in: a random ID kept in this browser, the event name,
+// and the app version, with at most one "active" ping per day.
+//
+// Never tickers, API keys, or anything else about what was looked at.
 
 export type Consent = 'granted' | 'denied';
 export type TelemetryEvent = 'active' | 'opt_in' | 'setup_complete' | 'install';
@@ -28,13 +32,13 @@ function anonId(): string {
 	return id;
 }
 
-async function send(event: TelemetryEvent): Promise<boolean> {
-	if (import.meta.env.DEV || getConsent() !== 'granted') return false;
+async function post(event: TelemetryEvent, id: string): Promise<boolean> {
+	if (import.meta.env.DEV) return false;
 	try {
 		const res = await fetch(PING_URL, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ id: anonId(), event, v: __APP_VERSION__ }),
+			body: JSON.stringify({ id, event, v: __APP_VERSION__ }),
 			keepalive: true,
 		});
 		return res.ok;
@@ -42,6 +46,9 @@ async function send(event: TelemetryEvent): Promise<boolean> {
 		return false; // Best effort only.
 	}
 }
+
+/** Opt-in events, sent with this browser's anonymous ID. */
+const send = async (event: TelemetryEvent) => (getConsent() === 'granted' ? post(event, anonId()) : false);
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -64,4 +71,5 @@ export async function setConsent(consent: Consent): Promise<void> {
 }
 
 export const pingSetupComplete = () => send('setup_complete');
-export const pingInstall = () => send('install');
+/** Count an install. Always sent, without the browser's ID. */
+export const pingInstall = () => post('install', crypto.randomUUID());

@@ -23,7 +23,7 @@ The app tests both keys before saving them, and keeps them only in the visitor's
 Browser (React + TypeScript)                Cloudflare Worker (relay)          Providers
   keys in localStorage                        /api/stock/:ticker  ───────────▶ Tiingo
   data cached 12–24 h in Cache Storage ──▶    /api/macro          ───────────▶ FRED
-  all statistics computed here                /api/ping  → D1 (opt-in usage counts)
+  all statistics computed here                /api/ping  → D1 (anonymous usage counts)
 ```
 
 Tiingo and FRED don't send CORS headers, so browsers can't call them directly. The Worker relays each request with the visitor's key in a header (`X-Tiingo-Key`, `X-Fred-Key`). Keys are used only for that upstream request, never stored or logged. Responses are marked `private, no-store`, and nothing is cached on the server, so one visitor's data is never served to another. The relay validates tickers and key formats, rate-limits per visitor, and turns provider errors (rejected key, usage limit, unknown ticker) into clear messages.
@@ -32,12 +32,13 @@ The statistics use **changes**, not levels: two series that both trend over deca
 
 ## Usage counts
 
-Same scheme as the Finance Tracker. On first visit, people are asked whether to share anonymous usage counts. If they opt in, the app sends a random ID, the app version and one of these events:
+Same scheme as the Finance Tracker:
 
-- `opt_in`
-- `active`, at most once a day
-- `setup_complete`, when they've added working keys
-- `install`, when they install it as an app
+- **Installs are always counted.** The app sends `install`, the app version and a one-off random number that isn't stored, so an install can't be linked to anything else.
+- **Everything else is opt-in.** On first visit, people are asked whether to share anonymous usage counts. If they opt in, the app sends a random ID kept in their browser, the app version and one of these events:
+  - `opt_in`
+  - `active`, at most once a day
+  - `setup_complete`, when they've added working keys
 
 It never sends keys, tickers or anything they look up.
 
