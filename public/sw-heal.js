@@ -31,11 +31,21 @@ self.addEventListener('fetch', (event) => {
 	);
 });
 
+// Only browsers that already had an older version installed can be stuck, so a
+// first-time visitor is never reloaded.
+const UPGRADE_FLAG = `app-page-repair-pending:${SCOPE_PATH}`;
+
+self.addEventListener('install', (event) => {
+	if (self.registration.active) event.waitUntil(caches.open(UPGRADE_FLAG));
+});
+
 self.addEventListener('activate', (event) => {
 	event.waitUntil(
 		(async () => {
-			if (await caches.has(REPAIR_MARKER)) return;
+			const alreadyRepaired = await caches.has(REPAIR_MARKER);
+			const upgrading = await caches.delete(UPGRADE_FLAG);
 			await caches.open(REPAIR_MARKER);
+			if (alreadyRepaired || !upgrading) return;
 			await self.clients.claim();
 			const windows = await self.clients.matchAll({ type: 'window' });
 			await Promise.all(windows.map((client) => client.navigate(client.url).catch(() => {})));
