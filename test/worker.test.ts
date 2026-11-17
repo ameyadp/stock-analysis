@@ -84,7 +84,13 @@ describe('worker', () => {
 		limiterOk = true;
 		inserted = [];
 		env = {
-			ASSETS: { fetch: async (r: Request) => new Response(`asset:${new URL(r.url).pathname}`) } as never,
+			// Fake static files: "/" and anything under /assets/app exist; everything else is missing.
+			ASSETS: {
+				fetch: async (r: Request) => {
+					const p = new URL(r.url).pathname;
+					return p === '/' || p.startsWith('/assets/app') ? new Response(`asset:${p}`) : new Response('missing', { status: 404 });
+				},
+			} as never,
 			DB: {
 				prepare: () => ({ bind: (...args: unknown[]) => ({ run: async () => void inserted.push(args) }) }),
 			} as never,
@@ -112,6 +118,12 @@ describe('worker', () => {
 		const redirect = await call('');
 		expect(redirect.status).toBe(301);
 		expect(redirect.headers.get('Location')).toBe(`${BASE}/`);
+	});
+
+	it('shows the app for unknown page addresses but 404s for missing files', async () => {
+		expect(await (await call('/some/page')).text()).toBe('asset:/');
+		const oldScript = await call('/assets/index-OLDHASH.js');
+		expect(oldScript.status).toBe(404);
 	});
 
 	it('relays a stock lookup with the visitor’s own key and never caches it', async () => {

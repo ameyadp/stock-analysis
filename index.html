@@ -11,6 +11,26 @@
 	</head>
 	<body>
 		<div id="root"></div>
+		<script>
+			// If this page is an outdated cached copy, its script may no longer exist.
+			// Reload once to fetch the current version instead of showing a blank page.
+			window.addEventListener(
+				'error',
+				function (e) {
+					var t = e.target;
+					if (t && t.tagName === 'SCRIPT' && t.type === 'module' && !sessionStorage.getItem('reloaded-for-update')) {
+						sessionStorage.setItem('reloaded-for-update', '1');
+						location.reload();
+					}
+				},
+				true,
+			);
+			window.addEventListener('load', function () {
+				setTimeout(function () {
+					sessionStorage.removeItem('reloaded-for-update');
+				}, 5000);
+			});
+		</script>
 		<script type="module" src="/src/main.tsx"></script>
 	</body>
 </html>

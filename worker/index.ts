@@ -105,6 +105,12 @@ export default {
 		}
 
 		url.pathname = path;
-		return env.ASSETS.fetch(new Request(url, request));
+		const asset = await env.ASSETS.fetch(new Request(url, request));
+		// Unknown page addresses show the app; unknown files (e.g. an old script) stay a 404.
+		if (asset.status === 404 && !/\.[a-z0-9]+$/i.test(path)) {
+			url.pathname = '/';
+			return env.ASSETS.fetch(new Request(url, request));
+		}
+		return asset;
 	},
 } satisfies ExportedHandler<Env>;

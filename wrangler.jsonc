@@ -9,7 +9,9 @@
 	"preview_urls": false,
 	"assets": {
 		"directory": "./dist",
-		"not_found_handling": "single-page-application",
+		// Missing files must 404 (not return the app page), or a stale page would try to run HTML as a script.
+		// The Worker falls back to the app page itself for addresses without a file extension.
+		"not_found_handling": "none",
 		"binding": "ASSETS",
 		// Every request goes through the Worker, which strips the URL prefix (see worker/base.ts).
 		"run_worker_first": true
