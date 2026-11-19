@@ -3,6 +3,10 @@
 	"name": "stock-analysis",
 	"main": "worker/index.ts",
 	"compatibility_date": "2026-11-01",
+	// Workers Logs (request logs in the Cloudflare dashboard) are turned off.
+	"observability": {
+		"enabled": false
+	},
 	// Only reachable through ameyapurandare.com/projects/stock-analysis/app/,
 	// which forwards to this Worker via a service binding.
 	"workers_dev": false,
