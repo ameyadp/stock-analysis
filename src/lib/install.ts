@@ -14,12 +14,21 @@ if (typeof window !== 'undefined') {
 	// Chrome and Edge fire this when the app can be installed; keep it for our own button.
 	window.addEventListener('beforeinstallprompt', (e) => {
 		e.preventDefault();
+		// Chrome and Edge only offer installing when the app isn't installed.
+		forgetInstalled();
 		deferred = e as InstallPromptEvent;
 		notify();
 	});
 	window.addEventListener('appinstalled', () => {
 		deferred = null;
+		markInstalled();
 		notify();
+		reloadSoon();
+	});
+	// Installing from a tab moves that tab into the new app window without reloading it,
+	// which would leave the browser-only overview on screen. Start fresh in app mode.
+	window.matchMedia?.('(display-mode: standalone)').addEventListener?.('change', (e) => {
+		if (e.matches) reloadSoon();
 	});
 }
 
@@ -39,6 +48,48 @@ export async function promptInstall(): Promise<boolean> {
 	await event.prompt();
 	const choice = await event.userChoice.catch(() => ({ outcome: 'dismissed' as const }));
 	return choice.outcome === 'accepted';
+}
+
+const INSTALLED = 'stock-analysis:installed';
+let reloading = false;
+
+function reloadSoon() {
+	if (reloading) return;
+	reloading = true;
+	// A moment's delay lets the install count finish sending.
+	setTimeout(() => window.location.reload(), 400);
+}
+
+function markInstalled(): void {
+	try {
+		localStorage.setItem(INSTALLED, '1');
+	} catch {
+		// storage unavailable
+	}
+}
+
+function forgetInstalled(): void {
+	try {
+		localStorage.removeItem(INSTALLED);
+	} catch {
+		// storage unavailable
+	}
+}
+
+/**
+ * True when the app is installed on this device: running as the app, or a browser tab on a
+ * device where it was installed. Browser tabs then skip the overview and install prompts.
+ */
+export function isInstalled(): boolean {
+	if (isStandalone()) {
+		markInstalled();
+		return true;
+	}
+	try {
+		return localStorage.getItem(INSTALLED) === '1';
+	} catch {
+		return false;
+	}
 }
 
 /** True when running as the installed app rather than in a browser tab. */
@@ -88,7 +139,7 @@ const CONTINUE_IN_BROWSER = 'stock-analysis:continue-in-browser';
 
 /** Whether to show the overview screen: only in a browser tab, until the person chooses to continue there. */
 export function shouldShowIntro(): boolean {
-	if (isStandalone()) return false;
+	if (isInstalled()) return false;
 	try {
 		return sessionStorage.getItem(CONTINUE_IN_BROWSER) !== '1';
 	} catch {

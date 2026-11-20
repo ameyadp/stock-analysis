@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from 'react';
 import { ApiRequestError, clearDataCache, fetchMacro, fetchStock } from '../api';
 import { type ApiKeys, clearKeys, keyProblems, saveKeys } from '../lib/keys';
-import { type Consent, getConsent, pingSetupComplete, setConsent } from '../lib/telemetry';
+import { pingSetupComplete } from '../lib/telemetry';
 
 interface Props {
 	keys: ApiKeys | null;
@@ -22,7 +22,6 @@ export function Setup({ keys, onSaved, onClose, onCleared }: Props) {
 	const [show, setShow] = useState(false);
 	const [problems, setProblems] = useState<Problems>({});
 	const [testing, setTesting] = useState(false);
-	const [consent, setConsentState] = useState<Consent | null>(getConsent);
 
 	async function submit(e: FormEvent) {
 		e.preventDefault();
@@ -59,12 +58,6 @@ export function Setup({ keys, onSaved, onClose, onCleared }: Props) {
 		setTiingo('');
 		setFred('');
 		onCleared();
-	}
-
-	async function changeConsent(granted: boolean) {
-		const value: Consent = granted ? 'granted' : 'denied';
-		setConsentState(value);
-		await setConsent(value);
 	}
 
 	return (
@@ -169,14 +162,8 @@ export function Setup({ keys, onSaved, onClose, onCleared }: Props) {
 			</p>
 
 			<div className="privacy">
-				<label className="toggle">
-					<input type="checkbox" checked={consent === 'granted'} onChange={(e) => void changeConsent(e.target.checked)} /> Share
-					anonymous usage counts
-				</label>
 				<p className="muted small">
-					If on, the app sends a random ID, the app version, and “active” once a day you use it, so the developer can see whether
-					it’s worth building further. Never your keys, tickers, or anything you look up. Installing and opening the app are
-					always counted (as is reaching the end of the free browser trial), as just the event and the app version, with no ID.
+					📊 Using Stock Analysis includes anonymous usage counts, and this is required: each install and app open, plus once a day a random ID, the app version and the word “active”, so I can see how many people use it. Never your keys, tickers or anything you look up. Reaching the end of the free browser trial is also counted, with no ID.
 				</p>
 			</div>
 		</section>

@@ -49,11 +49,13 @@ describe('usage counting', () => {
 		expect(localStorage.getItem('stock-analysis:install-counted')).toBe('1');
 	});
 
-	it('sends nothing else without consent', async () => {
+	it('counts daily use without asking: once a day, with a new-device count the first time', async () => {
+		await setConsent('denied'); // an old "no" from before counts were required
 		await pingActive();
-		await setConsent('denied');
 		await pingActive();
-		expect(fetchMock).not.toHaveBeenCalled();
+		const events = sent();
+		expect(events.map((e) => e.event)).toEqual(['opt_in', 'active']);
+		expect(events[0].id).toBe(events[1].id);
 	});
 
 	it('sends opt-in events with a stable anonymous ID once consent is given', async () => {

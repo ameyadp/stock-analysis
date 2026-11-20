@@ -57,6 +57,10 @@ export function RegistrationForm({ onDone, submitLabel = 'Continue' }: { onDone:
 				information, email <a href={`mailto:${PRIVACY_CONTACT}`}>{PRIVACY_CONTACT}</a>.
 			</p>
 
+			<p className="usage-note" role="note">
+				📊 Using Stock Analysis includes anonymous usage counts, and this is required: each install and app open, plus once a day a random ID, the app version and the word “active”, so I can see how many people use it. Never your keys, tickers or anything you look up.
+			</p>
+
 			{error && (
 				<p className="reg-error" role="alert">
 					{error}
@@ -127,7 +131,7 @@ export function RegistrationGate({
 }
 
 /** Shown in the browser during the free trial. */
-export function TrialBanner({ session, total, onSignUp, onInstall }: { session: number; total: number; onSignUp: () => void; onInstall: () => void }) {
+export function TrialBanner({ session, total, onSignUp, onInstall }: { session: number; total: number; onSignUp: () => void; onInstall?: () => void }) {
 	const left = total - session;
 	return (
 		<aside className="trial-banner" role="region" aria-label="Free trial">
@@ -141,9 +145,11 @@ export function TrialBanner({ session, total, onSignUp, onInstall }: { session: 
 				<button type="button" onClick={onSignUp}>
 					Sign up
 				</button>
-				<button type="button" className="secondary" onClick={onInstall}>
-					Install app
-				</button>
+				{onInstall && (
+					<button type="button" className="secondary" onClick={onInstall}>
+						Install app
+					</button>
+				)}
 			</div>
 		</aside>
 	);

@@ -1,3 +1,4 @@
+import { SiteNav } from './SiteNav';
 // Overview shown when the app is opened in a browser tab (not installed):
 // what it does, a screenshot, and a nudge to install for regular use.
 
@@ -11,6 +12,7 @@ const FEATURES: { title: string; text: string }[] = [
 export function AppIntro({ onInstall, onContinue }: { onInstall: () => void; onContinue: () => void }) {
 	return (
 		<div className="intro-page">
+			<SiteNav />
 			<header className="intro-head">
 				<img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={56} height={56} />
 				<div>
@@ -18,6 +20,10 @@ export function AppIntro({ onInstall, onContinue }: { onInstall: () => void; onC
 					<p className="intro-tagline">See how a stock behaved through Fed rate cycles, and how sensitive it is to the economy.</p>
 				</div>
 			</header>
+
+			<p className="usage-note" role="note">
+				📊 Using Stock Analysis includes anonymous usage counts, and this is required: each install and app open, plus once a day a random ID, the app version and the word “active”, so I can see how many people use it. Never your keys, tickers or anything you look up.
+			</p>
 
 			<div className="intro-actions">
 				<button type="button" className="intro-primary" onClick={onInstall}>
@@ -49,7 +55,7 @@ export function AppIntro({ onInstall, onContinue }: { onInstall: () => void; onC
 				))}
 			</ul>
 
-			<p className="intro-foot">For education only, not investment advice. Installing asks once for your name, email and location; installs and app opens are also counted anonymously.</p>
+			<p className="intro-foot">For education only, not investment advice. Installing asks once for your name, email and location.</p>
 		</div>
 	);
 }

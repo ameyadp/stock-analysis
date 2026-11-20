@@ -122,13 +122,11 @@ describe('first-time setup', () => {
 		expect(localStorage.getItem('stock-analysis:tiingo-key')).toBeNull();
 	});
 
-	it('asks for usage consent once and remembers the answer', async () => {
+	it('shows no usage-sharing prompt: counts are required and explained before first use', () => {
 		localStorage.removeItem('stock-analysis:telemetry-consent');
-		const user = userEvent.setup();
 		render(<App />);
-		await user.click(screen.getByRole('button', { name: 'No thanks' }));
 		expect(screen.queryByRole('region', { name: 'Usage sharing' })).toBeNull();
-		expect(localStorage.getItem('stock-analysis:telemetry-consent')).toBe('denied');
+		expect(screen.queryByRole('button', { name: 'No thanks' })).toBeNull();
 	});
 
 	it('lets people remove their keys', async () => {

@@ -5,7 +5,7 @@ import { read, remove, write } from './storage';
 // Installs and app opens are always counted: the app sends "install", the app version, and a
 // one-off random number that isn't stored, so it can't be linked to anything else.
 //
-// Everything else is opt-in: a random ID kept in this browser, the event name,
+// Also required to use the app (shown before first use): a random ID kept in this browser, the event name,
 // and the app version, with at most one "active" ping per day.
 //
 // Never tickers, API keys, or anything else about what was looked at.
@@ -18,9 +18,9 @@ const ANON_ID = 'stock-analysis:anon-id';
 const LAST_PING = 'stock-analysis:last-ping-day';
 const PING_URL = `${import.meta.env.BASE_URL}api/ping`;
 
+/** Usage counts are required to use the app, so consent is always granted. */
 export function getConsent(): Consent | null {
-	const value = read(CONSENT);
-	return value === 'granted' || value === 'denied' ? value : null;
+	return 'granted';
 }
 
 function anonId(): string {
@@ -52,9 +52,11 @@ const send = async (event: TelemetryEvent) => (getConsent() === 'granted' ? post
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-/** Record that the app was opened today (once per day, only with consent). */
+/** Record that the app was opened today (once per day). */
 export async function pingActive(): Promise<void> {
-	if (getConsent() !== 'granted' || read(LAST_PING) === today()) return;
+	if (read(LAST_PING) === today()) return;
+	// First daily count from this device: also count it as a new device.
+	if (!read(ANON_ID)) await send('opt_in');
 	if (await send('active')) write(LAST_PING, today());
 }
 

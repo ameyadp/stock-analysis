@@ -1,9 +1,10 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { ApiRequestError, fetchMacro, fetchStock } from './api';
 import { monthlyReturns, summarize } from './lib/analysis';
-import { continueInBrowser, installNoticeSeen, isStandalone, shouldShowIntro, takeInstallRequest } from './lib/install';
+import { continueInBrowser, installNoticeSeen, isInstalled, isStandalone, shouldShowIntro, takeInstallRequest } from './lib/install';
+import { SiteNav } from './components/SiteNav';
 import { type ApiKeys, loadKeys } from './lib/keys';
-import { type Consent, getConsent, pingActive, setConsent, pingTrialEnded } from './lib/telemetry';
+import { pingActive, pingTrialEnded } from './lib/telemetry';
 import type { MacroData, StockData } from './lib/types';
 import { MacroPanel } from './components/MacroPanel';
 import { PriceChart } from './components/PriceChart';
@@ -32,29 +33,10 @@ const failed = (err: unknown) => ({
 	keyProblem: err instanceof ApiRequestError && err.status === 401,
 });
 
-function ConsentBanner({ onAnswer }: { onAnswer: (c: Consent) => void }) {
-	return (
-		<aside className="banner" role="region" aria-label="Usage sharing">
-			<p>
-				<strong>Help decide if this tool is worth building further?</strong> Share an anonymous daily “used the app” count. Never
-				your keys or what you look up. You can change this under Data keys.
-			</p>
-			<div className="actions">
-				<button type="button" className="primary" onClick={() => onAnswer('granted')}>
-					Share anonymous counts
-				</button>
-				<button type="button" className="secondary" onClick={() => onAnswer('denied')}>
-					No thanks
-				</button>
-			</div>
-		</aside>
-	);
-}
 
 export default function App() {
 	const [keys, setKeys] = useState<ApiKeys | null>(loadKeys);
 	const [setupOpen, setSetupOpen] = useState(() => !loadKeys());
-	const [consent, setConsentState] = useState<Consent | null>(getConsent);
 	const [input, setInput] = useState(tickerFromUrl);
 	const [ticker, setTicker] = useState(tickerFromUrl);
 	const [stock, setStock] = useState<Load<StockData>>({ status: 'idle' });
@@ -135,11 +117,6 @@ export default function App() {
 		setTicker(t);
 	}
 
-	function answerConsent(c: Consent) {
-		setConsentState(c);
-		void setConsent(c);
-	}
-
 	const derived = useMemo(() => {
 		if (stock.status !== 'ready') return null;
 		return { summary: summarize(stock.data), returns: monthlyReturns(stock.data.dates, stock.data.adjClose) };
@@ -153,7 +130,7 @@ export default function App() {
 				<RegistrationGate
 					reason={gate}
 					onDone={finishSignUp}
-					onInstall={gate === 'installed' ? undefined : () => setInstallOpen(true)}
+					onInstall={gate === 'installed' || isInstalled() ? undefined : () => setInstallOpen(true)}
 					onCancel={gate === 'voluntary' ? () => setGate(null) : undefined}
 				/>
 				{installOpen && <InstallDialog onClose={() => setInstallOpen(false)} />}
@@ -181,6 +158,7 @@ export default function App() {
 
 	return (
 		<div className="app">
+			<SiteNav />
 			<header className="topbar">
 				<a className="brand" href={import.meta.env.BASE_URL}>
 					<span className="logo" aria-hidden="true">
@@ -189,7 +167,7 @@ export default function App() {
 					Stock Analysis
 				</a>
 				<nav className="top-links">
-					{!isStandalone() && (
+					{!isInstalled() && (
 						<button type="button" className="secondary small" onClick={() => setInstallOpen(true)}>
 							Install app
 						</button>
@@ -204,10 +182,9 @@ export default function App() {
 			</header>
 
 			{trialSession !== null && trialSession <= TRIAL_SESSIONS && (
-				<TrialBanner session={trialSession} total={TRIAL_SESSIONS} onSignUp={() => setGate('voluntary')} onInstall={() => setInstallOpen(true)} />
+				<TrialBanner session={trialSession} total={TRIAL_SESSIONS} onSignUp={() => setGate('voluntary')} onInstall={isInstalled() ? undefined : () => setInstallOpen(true)} />
 			)}
 			{showInstalledNotice && <InstalledNotice onClose={() => setShowInstalledNotice(false)} />}
-			{consent === null && <ConsentBanner onAnswer={answerConsent} />}
 			{installOpen && <InstallDialog onClose={() => setInstallOpen(false)} />}
 
 			{setupOpen && (
@@ -216,7 +193,6 @@ export default function App() {
 					onSaved={(k) => {
 						setKeys(k);
 						setSetupOpen(false);
-						setConsentState(getConsent());
 					}}
 					onClose={() => setSetupOpen(false)}
 					onCleared={() => {
