@@ -9,8 +9,9 @@ import { MacroPanel } from './components/MacroPanel';
 import { PriceChart } from './components/PriceChart';
 import { RateCycles } from './components/RateCycles';
 import { AppIntro } from './components/AppIntro';
-import { RegistrationGate } from './components/RegistrationForm';
+import { type GateReason, RegistrationGate, TrialBanner } from './components/RegistrationForm';
 import { isRegistered } from './lib/registration';
+import { TRIAL_SESSIONS, enterBrowserApp } from './lib/trial';
 import { InstallDialog, InstalledNotice } from './components/InstallDialog';
 import { Setup } from './components/Setup';
 import { Summary } from './components/Summary';
@@ -60,8 +61,22 @@ export default function App() {
 	const [macro, setMacro] = useState<Load<MacroData>>({ status: 'idle' });
 	const [installOpen, setInstallOpen] = useState(takeInstallRequest);
 	const [introOpen, setIntroOpen] = useState(shouldShowIntro);
-	// Installed apps require the sign-up once per device before they can be used.
-	const [needsRegistration, setNeedsRegistration] = useState(() => isStandalone() && !isRegistered());
+	// Sign-up gate and browser trial:
+	//  - installed app: sign-up required once per device before use
+	//  - browser tab: TRIAL_SESSIONS free sessions, then sign-up required
+	const [access] = useState(() =>
+		isStandalone()
+			? { gate: (isRegistered() ? null : 'installed') as GateReason | null, session: null as number | null }
+			: shouldShowIntro()
+				? { gate: null, session: null }
+				: enterBrowserApp(),
+	);
+	const [gate, setGate] = useState<GateReason | null>(access.gate);
+	const [trialSession, setTrialSession] = useState<number | null>(access.session);
+	const finishSignUp = () => {
+		setGate(null);
+		setTrialSession(null);
+	};
 	const [showInstalledNotice, setShowInstalledNotice] = useState(() => isStandalone() && !installNoticeSeen());
 
 	useEffect(() => {
@@ -128,7 +143,19 @@ export default function App() {
 
 	const macroData = macro.status === 'ready' ? macro.data : null;
 
-	if (needsRegistration) return <RegistrationGate onDone={() => setNeedsRegistration(false)} />;
+	if (gate) {
+		return (
+			<>
+				<RegistrationGate
+					reason={gate}
+					onDone={finishSignUp}
+					onInstall={gate === 'installed' ? undefined : () => setInstallOpen(true)}
+					onCancel={gate === 'voluntary' ? () => setGate(null) : undefined}
+				/>
+				{installOpen && <InstallDialog onClose={() => setInstallOpen(false)} />}
+			</>
+		);
+	}
 
 	if (introOpen) {
 		return (
@@ -138,6 +165,9 @@ export default function App() {
 					onContinue={() => {
 						continueInBrowser();
 						setIntroOpen(false);
+						const entry = enterBrowserApp();
+						setGate(entry.gate);
+						setTrialSession(entry.session);
 					}}
 				/>
 				{installOpen && <InstallDialog onClose={() => setInstallOpen(false)} />}
@@ -169,6 +199,9 @@ export default function App() {
 				</nav>
 			</header>
 
+			{trialSession !== null && trialSession <= TRIAL_SESSIONS && (
+				<TrialBanner session={trialSession} total={TRIAL_SESSIONS} onSignUp={() => setGate('voluntary')} onInstall={() => setInstallOpen(true)} />
+			)}
 			{showInstalledNotice && <InstalledNotice onClose={() => setShowInstalledNotice(false)} />}
 			{consent === null && <ConsentBanner onAnswer={answerConsent} />}
 			{installOpen && <InstallDialog onClose={() => setInstallOpen(false)} />}

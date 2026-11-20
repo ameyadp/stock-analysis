@@ -908,3 +908,51 @@ button.small {
 	color: #fff;
 	cursor: pointer;
 }
+
+/* ---------- Browser trial banner ---------- */
+
+.trial-banner {
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	padding: 10px 14px;
+	margin: 0 0 16px;
+	background: var(--surface);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px 16px;
+}
+
+.trial-banner p {
+	margin: 0;
+	font-size: 0.92rem;
+}
+
+.trial-banner .actions {
+	margin: 0;
+}
+
+.trial-banner .actions button,
+.reg-card .actions button {
+	font: inherit;
+	font-weight: 600;
+	font-size: 0.9rem;
+	padding: 6px 14px;
+	border-radius: 8px;
+	cursor: pointer;
+	min-height: 0;
+}
+
+.trial-banner .actions button:not(.secondary) {
+	border: 1px solid var(--intro-accent);
+	background: var(--intro-accent);
+	color: #fff;
+}
+
+.trial-banner .actions button.secondary,
+.reg-card .actions button.secondary {
+	border: 1px solid var(--intro-accent);
+	background: transparent;
+	color: var(--intro-accent);
+}

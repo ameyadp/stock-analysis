@@ -29,7 +29,7 @@ export function AppIntro({ onInstall, onContinue }: { onInstall: () => void; onC
 			</div>
 			<p className="intro-why">
 				Installing is the best way to use it regularly: it opens in its own window from your dock, start menu or home screen, and
-				works offline. Free; installing takes a one-time sign-up.
+				works offline. It’s free: installing takes a one-time sign-up, and in the browser you get 3 sessions before signing up.
 			</p>
 
 			<img

@@ -48,7 +48,7 @@ npm run stats   # includes app opens per day (installed vs browser)     # opted-
 
 ## Install sign-up
 
-Installing the app requires a one-time sign-up on that device: **name, email and location only**, typed by the person. It appears on the install screen, or on the installed app's first launch if it was installed from the browser's own menu. Using the app in a browser tab doesn't require it.
+Installing the app requires a one-time sign-up on that device: **name, email and location only**, typed by the person. It appears on the install screen, or on the installed app's first launch if it was installed from the browser's own menu. In a browser tab, people get **3 free sessions** first: a session is one visit in a tab (reloads don't count), counted only in that browser and never sent anywhere. After the third, the sign-up is required to keep using the browser version. Signed-up devices are never counted.
 
 - `POST api/register` validates the three fields, rate-limits per visitor, and ignores anything else. No IP address is stored.
 - Rows live in the `registrations` table of this app's D1 database, one per email (signing up again updates name and location).

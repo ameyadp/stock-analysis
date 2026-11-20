@@ -70,6 +70,8 @@ beforeEach(() => {
 	// Most tests start past the browser overview screen, as someone who chose "Continue in browser".
 	sessionStorage.clear();
 	sessionStorage.setItem('stock-analysis:continue-in-browser', '1');
+	localStorage.setItem('stock-analysis:registered', '1');
+	localStorage.removeItem('stock-analysis:browser-sessions');
 	fetchMock.mockClear();
 	vi.stubGlobal('fetch', fetchMock);
 	window.history.replaceState(null, '', '/projects/stock-analysis/app/');
@@ -300,5 +302,77 @@ describe('install sign-up', () => {
 		await user.click(screen.getByRole('button', { name: 'Start using the app' }));
 		await waitFor(() => expect(screen.queryByRole('heading', { name: 'Welcome to Stock Analysis' })).toBeNull());
 		vi.unstubAllGlobals();
+	});
+});
+
+describe('browser trial', () => {
+	const newTab = () => {
+		cleanup();
+		sessionStorage.clear();
+		sessionStorage.setItem('stock-analysis:continue-in-browser', '1');
+	};
+
+	beforeEach(() => {
+		localStorage.removeItem('stock-analysis:registered');
+		localStorage.removeItem('stock-analysis:browser-sessions');
+	});
+
+	it('counts one session per tab visit, not per reload', () => {
+		newTab();
+		render(<App />);
+		expect(screen.getByRole('region', { name: 'Free trial' }).textContent).toMatch(/Free browser session 1 of 3/);
+		cleanup();
+		render(<App />); // reload in the same tab
+		expect(screen.getByRole('region', { name: 'Free trial' }).textContent).toMatch(/session 1 of 3/);
+		newTab();
+		render(<App />);
+		expect(screen.getByRole('region', { name: 'Free trial' }).textContent).toMatch(/session 2 of 3/);
+		expect(localStorage.getItem('stock-analysis:browser-sessions')).toBe('2');
+	});
+
+	it('counts the session when continuing from the overview', async () => {
+		cleanup();
+		sessionStorage.clear();
+		const user = userEvent.setup();
+		render(<App />);
+		await user.click(screen.getByRole('button', { name: 'Continue in browser' }));
+		expect(screen.getByRole('region', { name: 'Free trial' }).textContent).toMatch(/session 1 of 3/);
+	});
+
+	it('requires sign-up on the 4th session, then lets the person in', async () => {
+		localStorage.setItem('stock-analysis:browser-sessions', '3');
+		vi.stubGlobal('fetch', vi.fn(async () => Response.json({ ok: true }, { status: 201 })));
+		newTab();
+		const user = userEvent.setup();
+		render(<App />);
+		expect(screen.getByRole('heading', { name: 'You’ve used your 3 free sessions' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Install the app instead' })).toBeTruthy();
+		await user.type(screen.getByLabelText('Name'), 'Ada');
+		await user.type(screen.getByLabelText('Email'), 'ada@example.com');
+		await user.type(screen.getByLabelText('Location'), 'London');
+		await user.click(screen.getByRole('button', { name: 'Keep using Stock Analysis' }));
+		await waitFor(() => expect(screen.queryByRole('heading', { name: 'You’ve used your 3 free sessions' })).toBeNull());
+		expect(screen.queryByRole('region', { name: 'Free trial' })).toBeNull();
+		vi.unstubAllGlobals();
+	});
+
+	it('lets people sign up early from the banner, or decline for now', async () => {
+		newTab();
+		const user = userEvent.setup();
+		render(<App />);
+		await user.click(screen.getByRole('button', { name: 'Sign up' }));
+		expect(screen.getByRole('heading', { name: 'Sign up for Stock Analysis' })).toBeTruthy();
+		await user.click(screen.getByRole('button', { name: 'Not now' }));
+		expect(screen.getByRole('region', { name: 'Free trial' })).toBeTruthy();
+	});
+
+	it('never counts or limits a signed-up device', () => {
+		localStorage.setItem('stock-analysis:registered', '1');
+		localStorage.setItem('stock-analysis:browser-sessions', '7');
+		newTab();
+		render(<App />);
+		expect(screen.queryByRole('region', { name: 'Free trial' })).toBeNull();
+		expect(screen.queryByRole('heading', { name: 'You’ve used your 3 free sessions' })).toBeNull();
+		expect(localStorage.getItem('stock-analysis:browser-sessions')).toBe('7');
 	});
 });

@@ -71,20 +71,80 @@ export function RegistrationForm({ onDone, submitLabel = 'Continue' }: { onDone:
 	);
 }
 
-/** Full-screen gate on the installed app's first launch, if the person hasn't signed up on this device. */
-export function RegistrationGate({ onDone }: { onDone: () => void }) {
+export type GateReason = 'installed' | 'trial-ended' | 'voluntary';
+
+const GATE_TEXT: Record<GateReason, { title: string; subtitle: string; submit: string }> = {
+	installed: { title: `Welcome to ${APP}`, subtitle: 'One quick step before you start: tell us who you are.', submit: 'Start using the app' },
+	'trial-ended': {
+		title: 'You’ve used your 3 free sessions',
+		subtitle: `Sign up (it’s free) to keep using ${APP} in your browser, or install the app.`,
+		submit: `Keep using ${APP}`,
+	},
+	voluntary: { title: `Sign up for ${APP}`, subtitle: 'Free, and it unlocks unlimited use in your browser.', submit: 'Sign up' },
+};
+
+/** Full-screen sign-up: on the installed app's first launch, when the browser trial ends, or when chosen. */
+export function RegistrationGate({
+	reason = 'installed',
+	onDone,
+	onInstall,
+	onCancel,
+}: {
+	reason?: GateReason;
+	onDone: () => void;
+	onInstall?: () => void;
+	onCancel?: () => void;
+}) {
+	const text = GATE_TEXT[reason];
 	return (
 		<div className="intro-page">
 			<header className="intro-head">
 				<img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={56} height={56} />
 				<div>
-					<h1>Welcome to {APP}</h1>
-					<p className="intro-tagline">One quick step before you start: tell us who you are.</p>
+					<h1>{text.title}</h1>
+					<p className="intro-tagline">{text.subtitle}</p>
 				</div>
 			</header>
 			<div className="reg-card">
-				<RegistrationForm onDone={onDone} submitLabel="Start using the app" />
+				<RegistrationForm onDone={onDone} submitLabel={text.submit} />
+				{(onInstall || onCancel) && (
+					<div className="actions">
+						{onInstall && (
+							<button type="button" className="secondary" onClick={onInstall}>
+								Install the app instead
+							</button>
+						)}
+						{onCancel && (
+							<button type="button" className="secondary" onClick={onCancel}>
+								Not now
+							</button>
+						)}
+					</div>
+				)}
 			</div>
 		</div>
+	);
+}
+
+/** Shown in the browser during the free trial. */
+export function TrialBanner({ session, total, onSignUp, onInstall }: { session: number; total: number; onSignUp: () => void; onInstall: () => void }) {
+	const left = total - session;
+	return (
+		<aside className="trial-banner" role="region" aria-label="Free trial">
+			<p>
+				<strong>
+					Free browser session {session} of {total}.
+				</strong>{' '}
+				{left > 0 ? `${left} more before sign-up is needed.` : 'Next time, a free sign-up is needed.'} Signing up or installing keeps {APP} free to use.
+			</p>
+			<div className="actions">
+				<button type="button" onClick={onSignUp}>
+					Sign up
+				</button>
+				<button type="button" className="secondary" onClick={onInstall}>
+					Install app
+				</button>
+			</div>
+		</aside>
 	);
 }
