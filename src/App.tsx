@@ -9,6 +9,8 @@ import { MacroPanel } from './components/MacroPanel';
 import { PriceChart } from './components/PriceChart';
 import { RateCycles } from './components/RateCycles';
 import { AppIntro } from './components/AppIntro';
+import { RegistrationGate } from './components/RegistrationForm';
+import { isRegistered } from './lib/registration';
 import { InstallDialog, InstalledNotice } from './components/InstallDialog';
 import { Setup } from './components/Setup';
 import { Summary } from './components/Summary';
@@ -58,6 +60,8 @@ export default function App() {
 	const [macro, setMacro] = useState<Load<MacroData>>({ status: 'idle' });
 	const [installOpen, setInstallOpen] = useState(takeInstallRequest);
 	const [introOpen, setIntroOpen] = useState(shouldShowIntro);
+	// Installed apps require the sign-up once per device before they can be used.
+	const [needsRegistration, setNeedsRegistration] = useState(() => isStandalone() && !isRegistered());
 	const [showInstalledNotice, setShowInstalledNotice] = useState(() => isStandalone() && !installNoticeSeen());
 
 	useEffect(() => {
@@ -123,6 +127,8 @@ export default function App() {
 	}, [stock]);
 
 	const macroData = macro.status === 'ready' ? macro.data : null;
+
+	if (needsRegistration) return <RegistrationGate onDone={() => setNeedsRegistration(false)} />;
 
 	if (introOpen) {
 		return (

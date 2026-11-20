@@ -1,11 +1,13 @@
 import { BASE_PATH } from './base';
 import { ProviderError, fetchMacro, fetchStock, isFredKey, isTiingoKey, normalizeTicker } from './data';
 import { parsePing } from './ping';
+import { handleRegister } from './register';
 
 // Serves the app under BASE_PATH plus a small API:
 //   GET  api/stock/:ticker  — relays to Tiingo with the visitor's own key (X-Tiingo-Key)
 //   GET  api/macro          — relays to FRED with the visitor's own key (X-Fred-Key)
-//   POST api/ping           — anonymous, opt-in usage counts
+//   POST api/ping           — anonymous usage counts
+//   POST api/register       — the install sign-up form (name, email, location)
 //
 // Tiingo and FRED don't allow requests straight from browsers (no CORS), so the
 // app sends requests through here. Visitors' keys are used only for that one
@@ -15,6 +17,7 @@ export interface Env {
 	ASSETS: Fetcher;
 	DB: D1Database;
 	LOOKUP_LIMITER: RateLimit;
+	REGISTER_LIMITER: RateLimit;
 }
 
 const BASE_NO_SLASH = BASE_PATH.slice(0, -1);
@@ -96,6 +99,7 @@ export default {
 			if (request.method !== 'POST') return new Response(null, { status: 405, headers: { Allow: 'POST' } });
 			return handlePing(request, env);
 		}
+		if (path === '/api/register') return handleRegister(request, env.DB, env.REGISTER_LIMITER);
 		if (path.startsWith('/api/')) {
 			if (request.method !== 'GET') return new Response(null, { status: 405, headers: { Allow: 'GET' } });
 			const stock = path.match(/^\/api\/stock\/([^/]+)$/);

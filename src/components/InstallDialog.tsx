@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { canPromptInstall, isStandalone, markInstallNoticeSeen, onInstallAvailabilityChange, platform, promptInstall } from '../lib/install';
+import { isRegistered } from '../lib/registration';
+import { RegistrationForm } from './RegistrationForm';
 
 const APP = 'Stock Analysis';
 
@@ -16,6 +18,7 @@ export function InstallNotice() {
 export function InstallDialog({ onClose }: { onClose: () => void }) {
 	const [canPrompt, setCanPrompt] = useState(canPromptInstall);
 	const [status, setStatus] = useState<'idle' | 'installed' | 'dismissed'>('idle');
+	const [registered, setRegistered] = useState(isRegistered);
 	const mode = isStandalone() ? 'installed' : canPrompt ? 'prompt' : platform();
 
 	useEffect(() => onInstallAvailabilityChange(() => setCanPrompt(canPromptInstall())), []);
@@ -55,6 +58,18 @@ export function InstallDialog({ onClose }: { onClose: () => void }) {
 						<div className="actions">
 							<button type="button" onClick={onClose}>
 								Close
+							</button>
+						</div>
+					</>
+				) : !registered ? (
+					<>
+						<p>
+							<strong>Step 1 of 2:</strong> installing {APP} needs a quick sign-up.
+						</p>
+						<RegistrationForm submitLabel="Continue to install" onDone={() => setRegistered(true)} />
+						<div className="actions">
+							<button type="button" className="secondary" onClick={onClose}>
+								Cancel
 							</button>
 						</div>
 					</>

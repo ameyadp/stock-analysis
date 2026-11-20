@@ -837,6 +837,74 @@ button.small {
 	font-size: 0.85rem;
 }
 
-.intro-page {
+:root {
 	--intro-accent: var(--accent);
+}
+
+/* ---------- Install sign-up form ---------- */
+
+.reg-form {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin: 4px 0 0;
+}
+
+.reg-form label {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.reg-form input {
+	font: inherit;
+	font-weight: 400;
+	padding: 9px 11px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--surface);
+	color: var(--text);
+	width: 100%;
+	min-height: 40px;
+}
+
+.reg-trap {
+	position: absolute;
+	left: -10000px;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}
+
+.reg-privacy {
+	font-size: 0.82rem;
+	color: var(--muted);
+	margin: 0;
+}
+
+.reg-error {
+	color: var(--negative);
+	font-size: 0.9rem;
+	margin: 0;
+}
+
+.reg-card {
+	margin-top: 24px;
+	max-width: 460px;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	padding: 20px;
+}
+
+.reg-form .actions button:not(.secondary) {
+	font-weight: 600;
+	padding: 9px 18px;
+	border-radius: 8px;
+	border: 1px solid var(--intro-accent, currentColor);
+	background: var(--intro-accent, var(--accent, #2337ff));
+	color: #fff;
+	cursor: pointer;
 }

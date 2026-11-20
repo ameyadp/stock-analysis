@@ -96,6 +96,7 @@ describe('worker', () => {
 				prepare: () => ({ bind: (...args: unknown[]) => ({ run: async () => void inserted.push(args) }) }),
 			} as never,
 			LOOKUP_LIMITER: { limit: async () => ({ success: limiterOk }) } as never,
+			REGISTER_LIMITER: { limit: async () => ({ success: true }) } as never,
 		};
 		fetchMock.mockReset();
 		vi.stubGlobal('fetch', fetchMock);

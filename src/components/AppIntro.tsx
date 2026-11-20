@@ -29,7 +29,7 @@ export function AppIntro({ onInstall, onContinue }: { onInstall: () => void; onC
 			</div>
 			<p className="intro-why">
 				Installing is the best way to use it regularly: it opens in its own window from your dock, start menu or home screen, and
-				works offline. Free, no sign-up.
+				works offline. Free; installing takes a one-time sign-up.
 			</p>
 
 			<img
@@ -49,7 +49,7 @@ export function AppIntro({ onInstall, onContinue }: { onInstall: () => void; onC
 				))}
 			</ul>
 
-			<p className="intro-foot">For education only, not investment advice. Installs and app opens are counted anonymously (no ID, none of your data).</p>
+			<p className="intro-foot">For education only, not investment advice. Installing asks once for your name, email and location; installs and app opens are also counted anonymously.</p>
 		</div>
 	);
 }

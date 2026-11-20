@@ -46,6 +46,15 @@ It never sends keys, tickers or anything they look up.
 npm run stats   # includes app opens per day (installed vs browser)     # opted-in devices, key setups, daily/weekly/monthly actives, retention
 ```
 
+## Install sign-up
+
+Installing the app requires a one-time sign-up on that device: **name, email and location only**, typed by the person. It appears on the install screen, or on the installed app's first launch if it was installed from the browser's own menu. Using the app in a browser tab doesn't require it.
+
+- `POST api/register` validates the three fields, rate-limits per visitor, and ignores anything else. No IP address is stored.
+- Rows live in the `registrations` table of this app's D1 database, one per email (signing up again updates name and location).
+- The form states the purpose (understanding who uses the app, occasional emails about major updates) and that people can email support@ameyapurandare.com to see or delete their data.
+- To view sign-ups from both apps, run `npm run signups` in the website repo, or open ameyapurandare.com/admin/signups (protected by Cloudflare Access).
+
 ## Development
 
 ```bash
