@@ -11,7 +11,7 @@ import { read, remove, write } from './storage';
 // Never tickers, API keys, or anything else about what was looked at.
 
 export type Consent = 'granted' | 'denied';
-export type TelemetryEvent = 'active' | 'opt_in' | 'setup_complete' | 'install' | 'open_app' | 'open_web';
+export type TelemetryEvent = 'active' | 'opt_in' | 'setup_complete' | 'install' | 'open_app' | 'open_web' | 'trial_ended';
 
 const CONSENT = 'stock-analysis:telemetry-consent';
 const ANON_ID = 'stock-analysis:anon-id';
@@ -90,4 +90,22 @@ export async function pingOpen(installed: boolean): Promise<void> {
 		// storage unavailable: still count
 	}
 	await post(installed ? 'open_app' : 'open_web', crypto.randomUUID());
+}
+
+const TRIAL_END_COUNTED = 'stock-analysis:trial-end-counted';
+
+/** Count a browser reaching the end of its free trial, once per device. Always sent, without the device's ID. */
+export async function pingTrialEnded(): Promise<void> {
+	try {
+		if (localStorage.getItem(TRIAL_END_COUNTED)) return;
+	} catch {
+		// storage unavailable: still count
+	}
+	if (await post('trial_ended', crypto.randomUUID())) {
+		try {
+			localStorage.setItem(TRIAL_END_COUNTED, '1');
+		} catch {
+			// ignore
+		}
+	}
 }

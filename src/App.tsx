@@ -3,7 +3,7 @@ import { ApiRequestError, fetchMacro, fetchStock } from './api';
 import { monthlyReturns, summarize } from './lib/analysis';
 import { continueInBrowser, installNoticeSeen, isStandalone, shouldShowIntro, takeInstallRequest } from './lib/install';
 import { type ApiKeys, loadKeys } from './lib/keys';
-import { type Consent, getConsent, pingActive, setConsent } from './lib/telemetry';
+import { type Consent, getConsent, pingActive, setConsent, pingTrialEnded } from './lib/telemetry';
 import type { MacroData, StockData } from './lib/types';
 import { MacroPanel } from './components/MacroPanel';
 import { PriceChart } from './components/PriceChart';
@@ -73,6 +73,10 @@ export default function App() {
 	);
 	const [gate, setGate] = useState<GateReason | null>(access.gate);
 	const [trialSession, setTrialSession] = useState<number | null>(access.session);
+	// Anonymous count (once per device) of browsers that used up their free trial.
+	useEffect(() => {
+		if (gate === 'trial-ended') void pingTrialEnded();
+	}, [gate]);
 	const finishSignUp = () => {
 		setGate(null);
 		setTrialSession(null);

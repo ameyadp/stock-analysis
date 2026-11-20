@@ -1,7 +1,7 @@
 {
   "name": "stock-analysis",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "How a stock behaves across Fed rate cycles and the macro economy",
   "type": "module",
   "scripts": {

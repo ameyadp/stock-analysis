@@ -66,6 +66,7 @@ describe('data parsing', () => {
 		expect(parsePing({ id, event: 'setup_complete', v: '0.2.0' })).toEqual({ id, event: 'setup_complete', version: '0.2.0' });
 		expect(parsePing({ id, event: 'install', v: '0.3.0' })).toEqual({ id, event: 'install', version: '0.3.0' });
 		expect(parsePing({ id, event: 'uninstall', v: '0.2.0' })).toBeNull();
+		expect(parsePing({ id, event: 'trial_ended', v: '0.6.1' })).toEqual({ id, event: 'trial_ended', version: '0.6.1' });
 		expect(parsePing({ id: 'nope', event: 'active', v: '0.2.0' })).toBeNull();
 		expect(parsePing({ id, event: 'active', v: '<b>' })).toBeNull();
 	});
