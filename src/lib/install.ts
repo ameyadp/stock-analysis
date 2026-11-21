@@ -110,11 +110,22 @@ export function iosBrowser(ua = navigator.userAgent): IosBrowser {
 /** Label for install buttons. iPhone and iPad can't install from a button: you add it to the Home Screen. */
 export const installLabel = () => (typeof navigator !== 'undefined' && platform() === 'ios' ? 'Add to Home Screen' : 'Install app');
 
-export type Platform = 'ios' | 'mac-safari' | 'chrome' | 'edge' | 'firefox' | 'other';
+export type Platform = 'ios' | 'android' | 'mac-safari' | 'chrome' | 'edge' | 'firefox' | 'other';
+
+export type AndroidBrowser = 'chrome' | 'samsung' | 'firefox' | 'other';
+
+/** On Android, which browser: each names its install menu item differently. */
+export function androidBrowser(ua = navigator.userAgent): AndroidBrowser {
+	if (/SamsungBrowser/.test(ua)) return 'samsung';
+	if (/Firefox\//.test(ua)) return 'firefox';
+	if (/Chrome\//.test(ua) && !/EdgA|OPR|YaBrowser/.test(ua)) return 'chrome';
+	return 'other';
+}
 
 export function platform(ua = navigator.userAgent, touchPoints = navigator.maxTouchPoints ?? 0): Platform {
 	const ios = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && touchPoints > 1);
 	if (ios) return 'ios';
+	if (/Android/.test(ua)) return 'android';
 	const safari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Firefox/.test(ua);
 	if (safari && /Macintosh/.test(ua)) return 'mac-safari';
 	if (/Firefox\//.test(ua)) return 'firefox';

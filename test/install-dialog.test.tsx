@@ -37,6 +37,29 @@ describe('install dialog', () => {
 		}
 	});
 
+	it('on Android without an install prompt, gives the menu steps for the browser (not desktop steps or a cannot-install message)', () => {
+		const original = navigator.userAgent;
+		const setUA = (ua: string) => Object.defineProperty(navigator, 'userAgent', { value: ua, configurable: true });
+		try {
+			setUA('Mozilla/5.0 (Android 14; Mobile; rv:133.0) Gecko/133.0 Firefox/133.0');
+			const { unmount } = render(<InstallDialog onClose={() => {}} />);
+			expect(screen.getByText(/Add app to Home screen/)).toBeTruthy();
+			expect(screen.queryByText(/can’t install web apps/)).toBeNull();
+			unmount();
+			setUA('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/26.0 Chrome/122.0.0.0 Mobile Safari/537.36');
+			const second = render(<InstallDialog onClose={() => {}} />);
+			expect(screen.getByText(/Add page to/)).toBeTruthy();
+			expect(screen.queryByText(/Dock, Launchpad/)).toBeNull();
+			second.unmount();
+			setUA('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36');
+			render(<InstallDialog onClose={() => {}} />);
+			expect(screen.getAllByText(/Install app|Add to Home screen/).length).toBeGreaterThan(0);
+			expect(screen.getByText(/home screen or app drawer/)).toBeTruthy();
+		} finally {
+			setUA(original);
+		}
+	});
+
 	it('offers to install again once the browser says it can (the app was removed)', () => {
 		localStorage.setItem('stock-analysis:installed', '1');
 		render(<InstallDialog onClose={() => {}} />);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { canPromptInstall, iosBrowser, isInstalled, isStandalone, markInstallNoticeSeen, onInstallAvailabilityChange, platform, promptInstall } from '../lib/install';
+import { androidBrowser, canPromptInstall, iosBrowser, isInstalled, isStandalone, markInstallNoticeSeen, onInstallAvailabilityChange, platform, promptInstall } from '../lib/install';
 import { isRegistered } from '../lib/registration';
 import { RegistrationForm } from './RegistrationForm';
 
@@ -52,6 +52,34 @@ function IosSteps() {
 				</li>
 				<li>
 					Tap <strong>Add</strong>. {APP} appears on your Home Screen: open it from there.
+				</li>
+			</ol>
+		</>
+	);
+}
+
+/** Android, when the browser hasn't offered its own install prompt. */
+function AndroidSteps() {
+	const browser = androidBrowser();
+	return (
+		<>
+			<p className="ios-why">If {APP} is already installed, open it from your home screen or app drawer. Otherwise:</p>
+			<ol className="install-steps">
+				{browser === 'samsung' ? (
+					<li>
+						Tap <strong>☰</strong> (bottom right) → <strong>Add page to</strong> → <strong>Home screen</strong>, or the install icon in the address bar.
+					</li>
+				) : browser === 'firefox' ? (
+					<li>
+						Tap <strong>⋮</strong> (top right) → <strong>Add app to Home screen</strong> (or <strong>Install</strong>).
+					</li>
+				) : (
+					<li>
+						Tap <strong>⋮</strong> (top right) → <strong>Install app</strong> or <strong>Add to Home screen</strong>.
+					</li>
+				)}
+				<li>
+					Confirm with <strong>Install</strong> or <strong>Add</strong>. {APP} then opens from your home screen like any app.
 				</li>
 			</ol>
 		</>
@@ -148,6 +176,7 @@ export function InstallDialog({ onClose }: { onClose: () => void }) {
 						{mode !== 'ios' && <p>Install it on this device to open it in its own window, from your dock, start menu or home screen, even offline.</p>}
 
 						{mode === 'ios' && <IosSteps />}
+						{mode === 'android' && <AndroidSteps />}
 						{mode === 'mac-safari' && (
 							<ol className="install-steps">
 								<li>
