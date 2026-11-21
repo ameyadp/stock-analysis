@@ -98,13 +98,16 @@ export function isStandalone(): boolean {
 	return window.matchMedia?.('(display-mode: standalone)').matches === true || (navigator as { standalone?: boolean }).standalone === true;
 }
 
-export type Platform = 'ios' | 'mac-safari' | 'other';
+export type Platform = 'ios' | 'mac-safari' | 'chrome' | 'edge' | 'firefox' | 'other';
 
 export function platform(ua = navigator.userAgent, touchPoints = navigator.maxTouchPoints ?? 0): Platform {
 	const ios = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && touchPoints > 1);
 	if (ios) return 'ios';
 	const safari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Firefox/.test(ua);
 	if (safari && /Macintosh/.test(ua)) return 'mac-safari';
+	if (/Firefox\//.test(ua)) return 'firefox';
+	if (/Edg\//.test(ua)) return 'edge';
+	if (/Chrome\//.test(ua) && !/OPR\//.test(ua)) return 'chrome';
 	return 'other';
 }
 

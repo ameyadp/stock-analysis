@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { canPromptInstall, isStandalone, markInstallNoticeSeen, onInstallAvailabilityChange, platform, promptInstall } from '../lib/install';
+import { canPromptInstall, isInstalled, isStandalone, markInstallNoticeSeen, onInstallAvailabilityChange, platform, promptInstall } from '../lib/install';
 import { isRegistered } from '../lib/registration';
 import { RegistrationForm } from './RegistrationForm';
 
@@ -9,8 +9,8 @@ const APP = 'Stock Analysis';
 export function InstallNotice() {
 	return (
 		<p className="install-notice">
-			<strong>Usage counting is required.</strong> Installing {APP} sends one anonymous count, and so does each session you use it:
-			just the event (“install” or “open”) and the app version, with no ID and none of your data. It can’t be turned off.
+			<strong>Usage counting is required.</strong> {APP} counts each install and app open, and once a day sends a random ID, the
+			app version and the word “active”, so I can see how many people use it. Never your keys or tickers.
 		</p>
 	);
 }
@@ -19,7 +19,7 @@ export function InstallDialog({ onClose }: { onClose: () => void }) {
 	const [canPrompt, setCanPrompt] = useState(canPromptInstall);
 	const [status, setStatus] = useState<'idle' | 'installed' | 'dismissed'>('idle');
 	const [registered, setRegistered] = useState(isRegistered);
-	const mode = isStandalone() ? 'installed' : canPrompt ? 'prompt' : platform();
+	const mode = isStandalone() ? 'installed' : canPrompt ? 'prompt' : isInstalled() ? 'already' : platform();
 
 	useEffect(() => onInstallAvailabilityChange(() => setCanPrompt(canPromptInstall())), []);
 	useEffect(() => {
@@ -61,6 +61,33 @@ export function InstallDialog({ onClose }: { onClose: () => void }) {
 							</button>
 						</div>
 					</>
+				) : mode === 'already' ? (
+					<>
+						<p>
+							<strong>{APP} is already installed on this device.</strong> Open it like any other app:
+						</p>
+						<ul className="install-steps">
+							<li>
+								<strong>Mac:</strong> from the Dock, Launchpad or Spotlight (search “{APP}”).
+							</li>
+							<li>
+								<strong>Windows:</strong> from the Start menu or taskbar.
+							</li>
+							<li>
+								<strong>Phone or tablet:</strong> from your home screen.
+							</li>
+							<li>
+								In <strong>Chrome</strong> or <strong>Edge</strong>, you can also click <strong>Open in app</strong> at the right end of the
+								address bar.
+							</li>
+						</ul>
+						<p className="muted small">Removed it? Reload this page and installing will be offered again.</p>
+						<div className="actions">
+							<button type="button" onClick={onClose}>
+								Use in the browser
+							</button>
+						</div>
+					</>
 				) : !registered ? (
 					<>
 						<p>
@@ -97,14 +124,40 @@ export function InstallDialog({ onClose }: { onClose: () => void }) {
 								</li>
 							</ol>
 						)}
+						{(mode === 'chrome' || mode === 'edge') && (
+							<>
+								<p className="small">Your browser hasn’t offered to install {APP} on this page. Usually that means one of these:</p>
+								<ul className="install-steps">
+									<li>
+										<strong>It’s already installed.</strong> Open it from your Dock, Launchpad or Start menu, or click <strong>Open in app</strong>{' '}
+										at the right end of the address bar.
+									</li>
+									<li>
+										<strong>Install it from the browser menu:</strong>{' '}
+										{mode === 'chrome' ? (
+											<>
+												click <strong>⋮</strong> (top right) → <strong>Cast, save, and share</strong> → <strong>Install {APP}…</strong>
+											</>
+										) : (
+											<>
+												click <strong>…</strong> (top right) → <strong>Apps</strong> → <strong>Install {APP}</strong>
+											</>
+										)}
+										, or the install icon at the right end of the address bar.
+									</li>
+									<li>
+										<strong>Another app covers this whole site.</strong> If you once installed ameyapurandare.com itself as an app, remove it
+										(open <strong>chrome://apps</strong>, right-click it, <strong>Remove</strong>), then reload this page.
+									</li>
+								</ul>
+							</>
+						)}
+						{mode === 'firefox' && <p>Firefox can’t install web apps. Open this page in Chrome, Edge or Safari to install {APP}.</p>}
 						{mode === 'other' && (
-							<ol className="install-steps">
-								<li>
-									In <strong>Chrome</strong> or <strong>Edge</strong>, click the install icon at the right end of the address bar, or open
-									the browser menu and choose <strong>Install {APP}</strong>.
-								</li>
-								<li>Firefox can’t install web apps. Open this page in Chrome, Edge or Safari instead.</li>
-							</ol>
+							<p>
+								Look for <strong>Install</strong> or <strong>Add to Home Screen</strong> in your browser’s menu. If there isn’t one, open this page in
+								Chrome, Edge or Safari.
+							</p>
 						)}
 
 						<InstallNotice />
