@@ -98,6 +98,18 @@ export function isStandalone(): boolean {
 	return window.matchMedia?.('(display-mode: standalone)').matches === true || (navigator as { standalone?: boolean }).standalone === true;
 }
 
+export type IosBrowser = 'safari' | 'chrome' | 'other';
+
+/** On iPhone and iPad, which browser: each puts the Share button somewhere different. */
+export function iosBrowser(ua = navigator.userAgent): IosBrowser {
+	if (/CriOS/.test(ua)) return 'chrome';
+	if (/FxiOS|EdgiOS|OPiOS/.test(ua)) return 'other';
+	return 'safari';
+}
+
+/** Label for install buttons. iPhone and iPad can't install from a button: you add it to the Home Screen. */
+export const installLabel = () => (typeof navigator !== 'undefined' && platform() === 'ios' ? 'Add to Home Screen' : 'Install app');
+
 export type Platform = 'ios' | 'mac-safari' | 'chrome' | 'edge' | 'firefox' | 'other';
 
 export function platform(ua = navigator.userAgent, touchPoints = navigator.maxTouchPoints ?? 0): Platform {

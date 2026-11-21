@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { canPromptInstall, isInstalled, isStandalone, markInstallNoticeSeen, onInstallAvailabilityChange, platform, promptInstall } from '../lib/install';
+import { canPromptInstall, iosBrowser, isInstalled, isStandalone, markInstallNoticeSeen, onInstallAvailabilityChange, platform, promptInstall } from '../lib/install';
 import { isRegistered } from '../lib/registration';
 import { RegistrationForm } from './RegistrationForm';
 
@@ -12,6 +12,49 @@ export function InstallNotice() {
 			<strong>Usage counting is required.</strong> {APP} counts each install and app open, and once a day sends a random ID, the
 			app version and the word “active”, so I can see how many people use it. Never your keys or tickers.
 		</p>
+	);
+}
+
+function ShareIcon() {
+	return (
+		<svg className="share-icon" viewBox="0 0 24 24" width="18" height="18" aria-label="Share icon" role="img">
+			<path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+			<path d="M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+		</svg>
+	);
+}
+
+/** iPhone and iPad: no install button exists for websites, so walk people through Add to Home Screen. */
+function IosSteps() {
+	const browser = iosBrowser();
+	const name = browser === 'chrome' ? 'Chrome' : browser === 'safari' ? 'Safari' : 'your browser';
+	return (
+		<>
+			<p className="ios-why">
+				iPhone and iPad don’t let websites install apps with a button, so it takes three quick taps in {name}:
+			</p>
+			<ol className="install-steps">
+				<li>
+					Tap <strong>Share</strong> <ShareIcon />{' '}
+					{browser === 'chrome' ? (
+						<>at the top right, in the address bar.</>
+					) : browser === 'safari' ? (
+						<>
+							in the toolbar at the bottom of the screen. On newer iOS, tap <strong>•••</strong> first; on iPad, Share is at the top right.
+						</>
+					) : (
+						<>in your browser’s toolbar or menu.</>
+					)}
+				</li>
+				<li>
+					Scroll down and tap <strong>Add to Home Screen</strong>
+					{browser === 'safari' && <> (if it’s missing, tap <strong>View More</strong>)</>}.
+				</li>
+				<li>
+					Tap <strong>Add</strong>. {APP} appears on your Home Screen: open it from there.
+				</li>
+			</ol>
+		</>
 	);
 }
 
@@ -41,7 +84,7 @@ export function InstallDialog({ onClose }: { onClose: () => void }) {
 	return (
 		<div className="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
 			<div className="dialog" role="dialog" aria-modal="true" aria-labelledby="install-title">
-				<h2 id="install-title">Install {APP}</h2>
+				<h2 id="install-title">{mode === 'ios' ? `Add ${APP} to your Home Screen` : `Install ${APP}`}</h2>
 
 				{status === 'installed' ? (
 					<>
@@ -102,18 +145,9 @@ export function InstallDialog({ onClose }: { onClose: () => void }) {
 					</>
 				) : (
 					<>
-						<p>Install it on this device to open it in its own window, from your dock, start menu or home screen, even offline.</p>
+						{mode !== 'ios' && <p>Install it on this device to open it in its own window, from your dock, start menu or home screen, even offline.</p>}
 
-						{mode === 'ios' && (
-							<ol className="install-steps">
-								<li>
-									Tap the <strong>Share</strong> button (the square with an arrow).
-								</li>
-								<li>
-									Choose <strong>Add to Home Screen</strong>, then tap <strong>Add</strong>.
-								</li>
-							</ol>
-						)}
+						{mode === 'ios' && <IosSteps />}
 						{mode === 'mac-safari' && (
 							<ol className="install-steps">
 								<li>
@@ -170,7 +204,7 @@ export function InstallDialog({ onClose }: { onClose: () => void }) {
 								</button>
 							) : (
 								<button type="button" onClick={acknowledge}>
-									Got it
+									{mode === 'ios' ? 'OK' : 'Got it'}
 								</button>
 							)}
 							<button type="button" className="secondary" onClick={onClose}>

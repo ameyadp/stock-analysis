@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { ApiRequestError, fetchMacro, fetchStock } from './api';
 import { monthlyReturns, summarize } from './lib/analysis';
-import { continueInBrowser, installNoticeSeen, isInstalled, isStandalone, shouldShowIntro, takeInstallRequest } from './lib/install';
+import { continueInBrowser, installNoticeSeen, isInstalled, isStandalone, shouldShowIntro, takeInstallRequest, installLabel } from './lib/install';
 import { SiteNav } from './components/SiteNav';
 import { type ApiKeys, loadKeys } from './lib/keys';
 import { pingActive, pingTrialEnded } from './lib/telemetry';
@@ -169,7 +169,7 @@ export default function App() {
 				<nav className="top-links">
 					{!isInstalled() && (
 						<button type="button" className="secondary small" onClick={() => setInstallOpen(true)}>
-							Install app
+							{installLabel()}
 						</button>
 					)}
 					<button type="button" className="link-button" onClick={() => setSetupOpen(!setupOpen)} aria-expanded={setupOpen}>

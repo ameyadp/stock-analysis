@@ -1,3 +1,4 @@
+import { installLabel } from '../lib/install';
 import { type FormEvent, useState } from 'react';
 import { submitRegistration } from '../lib/registration';
 
@@ -147,7 +148,7 @@ export function TrialBanner({ session, total, onSignUp, onInstall }: { session: 
 				</button>
 				{onInstall && (
 					<button type="button" className="secondary" onClick={onInstall}>
-						Install app
+						{installLabel()}
 					</button>
 				)}
 			</div>

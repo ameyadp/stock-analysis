@@ -997,3 +997,14 @@ button.small {
 	display: flex;
 	gap: 16px;
 }
+
+/* iPhone and iPad: Add to Home Screen steps */
+.ios-why {
+	font-size: 0.9rem;
+	color: var(--muted);
+}
+.share-icon {
+	display: inline-block;
+	vertical-align: -3px;
+	color: var(--accent);
+}

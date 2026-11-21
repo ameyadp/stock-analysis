@@ -1,3 +1,4 @@
+import { installLabel } from '../lib/install';
 import { SiteNav } from './SiteNav';
 // Overview shown when the app is opened in a browser tab (not installed):
 // what it does, a screenshot, and a nudge to install for regular use.
@@ -27,7 +28,7 @@ export function AppIntro({ onInstall, onContinue }: { onInstall: () => void; onC
 
 			<div className="intro-actions">
 				<button type="button" className="intro-primary" onClick={onInstall}>
-					Install app
+					{installLabel()}
 				</button>
 				<button type="button" className="intro-secondary" onClick={onContinue}>
 					Continue in browser
