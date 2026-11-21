@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { isInstalled, shouldShowIntro } from '../src/lib/install';
+import { act, renderHook } from '@testing-library/react';
+import { isInstalled, shouldShowIntro, verifyInstalled } from '../src/lib/install';
+import { useInstalled } from '../src/lib/useInstalled';
 
 const setStandalone = (on: boolean) => {
 	window.matchMedia = ((q: string) => ({ matches: on && q.includes('standalone'), media: q, addEventListener() {}, removeEventListener() {} })) as never;
@@ -34,5 +36,30 @@ describe('installed on this device', () => {
 		window.dispatchEvent(Object.assign(new Event('beforeinstallprompt'), { prompt: async () => {}, userChoice: Promise.resolve({ outcome: 'dismissed' }) }));
 		expect(isInstalled()).toBe(false);
 		expect(shouldShowIntro()).toBe(true);
+	});
+
+	it('the browser’s own check corrects a stale marker after uninstalling, and confirms a real install', async () => {
+		const nav = navigator as Navigator & { getInstalledRelatedApps?: () => Promise<unknown[]> };
+		try {
+			localStorage.setItem('stock-analysis:installed', '1');
+			nav.getInstalledRelatedApps = async () => [];
+			await verifyInstalled();
+			expect(isInstalled()).toBe(false);
+			nav.getInstalledRelatedApps = async () => [{ platform: 'webapp' }];
+			await verifyInstalled();
+			expect(isInstalled()).toBe(true);
+		} finally {
+			delete nav.getInstalledRelatedApps;
+		}
+	});
+
+	it('install buttons come back without a reload once the browser offers to install again', () => {
+		localStorage.setItem('stock-analysis:installed', '1');
+		const { result } = renderHook(() => useInstalled());
+		expect(result.current).toBe(true);
+		act(() => {
+			window.dispatchEvent(Object.assign(new Event('beforeinstallprompt'), { prompt: async () => {}, userChoice: new Promise(() => {}) }));
+		});
+		expect(result.current).toBe(false);
 	});
 });

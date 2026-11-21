@@ -1,8 +1,9 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { ApiRequestError, fetchMacro, fetchStock } from './api';
 import { monthlyReturns, summarize } from './lib/analysis';
-import { continueInBrowser, installNoticeSeen, isInstalled, isStandalone, shouldShowIntro, takeInstallRequest, installLabel } from './lib/install';
+import { continueInBrowser, installNoticeSeen, isStandalone, shouldShowIntro, takeInstallRequest, installLabel } from './lib/install';
 import { SiteNav } from './components/SiteNav';
+import { useInstalled } from './lib/useInstalled';
 import { type ApiKeys, loadKeys } from './lib/keys';
 import { pingActive, pingTrialEnded } from './lib/telemetry';
 import type { MacroData, StockData } from './lib/types';
@@ -35,6 +36,7 @@ const failed = (err: unknown) => ({
 
 
 export default function App() {
+	const installed = useInstalled();
 	const [keys, setKeys] = useState<ApiKeys | null>(loadKeys);
 	const [setupOpen, setSetupOpen] = useState(() => !loadKeys());
 	const [input, setInput] = useState(tickerFromUrl);
@@ -130,7 +132,7 @@ export default function App() {
 				<RegistrationGate
 					reason={gate}
 					onDone={finishSignUp}
-					onInstall={gate === 'installed' || isInstalled() ? undefined : () => setInstallOpen(true)}
+					onInstall={gate === 'installed' || installed ? undefined : () => setInstallOpen(true)}
 					onCancel={gate === 'voluntary' ? () => setGate(null) : undefined}
 				/>
 				{installOpen && <InstallDialog onClose={() => setInstallOpen(false)} />}
@@ -167,7 +169,7 @@ export default function App() {
 					Stock Analysis
 				</a>
 				<nav className="top-links">
-					{!isInstalled() && (
+					{!installed && (
 						<button type="button" className="secondary small" onClick={() => setInstallOpen(true)}>
 							{installLabel()}
 						</button>
@@ -182,7 +184,7 @@ export default function App() {
 			</header>
 
 			{trialSession !== null && trialSession <= TRIAL_SESSIONS && (
-				<TrialBanner session={trialSession} total={TRIAL_SESSIONS} onSignUp={() => setGate('voluntary')} onInstall={isInstalled() ? undefined : () => setInstallOpen(true)} />
+				<TrialBanner session={trialSession} total={TRIAL_SESSIONS} onSignUp={() => setGate('voluntary')} onInstall={installed ? undefined : () => setInstallOpen(true)} />
 			)}
 			{showInstalledNotice && <InstalledNotice onClose={() => setShowInstalledNotice(false)} />}
 			{installOpen && <InstallDialog onClose={() => setInstallOpen(false)} />}

@@ -19,6 +19,7 @@ if (typeof window !== 'undefined') {
 		deferred = e as InstallPromptEvent;
 		notify();
 	});
+	void verifyInstalled();
 	window.addEventListener('appinstalled', () => {
 		deferred = null;
 		markInstalled();
@@ -33,6 +34,23 @@ if (typeof window !== 'undefined') {
 }
 
 export const canPromptInstall = () => deferred !== null;
+
+/**
+ * Chrome and Edge can say for certain whether this app is installed, which corrects the saved
+ * "installed" marker after someone uninstalls. Elsewhere, the browser's install offer does it.
+ */
+export async function verifyInstalled(): Promise<void> {
+	const nav = navigator as Navigator & { getInstalledRelatedApps?: () => Promise<unknown[]> };
+	if (isStandalone() || typeof nav.getInstalledRelatedApps !== 'function') return;
+	try {
+		const apps = await nav.getInstalledRelatedApps();
+		if (apps.length > 0) markInstalled();
+		else forgetInstalled();
+		notify();
+	} catch {
+		// not available on this page or browser
+	}
+}
 
 export function onInstallAvailabilityChange(fn: () => void): () => void {
 	listeners.add(fn);

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { androidBrowser, canPromptInstall, iosBrowser, isInstalled, isStandalone, markInstallNoticeSeen, onInstallAvailabilityChange, platform, promptInstall } from '../lib/install';
+import { androidBrowser, canPromptInstall, iosBrowser, isStandalone, markInstallNoticeSeen, onInstallAvailabilityChange, platform, promptInstall } from '../lib/install';
 import { isRegistered } from '../lib/registration';
 import { RegistrationForm } from './RegistrationForm';
+import { useInstalled } from '../lib/useInstalled';
 
 const APP = 'Stock Analysis';
 
@@ -90,7 +91,8 @@ export function InstallDialog({ onClose }: { onClose: () => void }) {
 	const [canPrompt, setCanPrompt] = useState(canPromptInstall);
 	const [status, setStatus] = useState<'idle' | 'installed' | 'dismissed'>('idle');
 	const [registered, setRegistered] = useState(isRegistered);
-	const mode = isStandalone() ? 'installed' : canPrompt ? 'prompt' : isInstalled() ? 'already' : platform();
+	const installed = useInstalled();
+	const mode = isStandalone() ? 'installed' : canPrompt ? 'prompt' : installed ? 'already' : platform();
 
 	useEffect(() => onInstallAvailabilityChange(() => setCanPrompt(canPromptInstall())), []);
 	useEffect(() => {

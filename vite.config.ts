@@ -22,6 +22,8 @@ export default defineConfig({
 				background_color: '#ffffff',
 				display: 'standalone',
 				start_url: BASE_PATH,
+				// Lets the app's own pages ask the browser whether it's installed (getInstalledRelatedApps).
+				related_applications: [{ platform: 'webapp', url: `https://ameyapurandare.com${BASE_PATH}manifest.webmanifest` }],
 				scope: BASE_PATH,
 				id: BASE_PATH,
 				icons: [
